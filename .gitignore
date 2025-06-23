@@ -1,0 +1,4 @@
+datasets/HPatches/*
+*.Jarvis
+*.pyc
+logs/*
