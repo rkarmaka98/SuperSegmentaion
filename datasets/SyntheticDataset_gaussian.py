@@ -81,6 +81,10 @@ class SyntheticDataset_gaussian(data.Dataset):
             },
             "homographic": {"enable": False, "params": {}, "valid_border_margin": 0,},
         },
+        "gaussian_label": {
+            "enable": False,
+            "params": {},
+        }
     }
 
     # debug = True

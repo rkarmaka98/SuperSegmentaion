@@ -1,6 +1,6 @@
 data:
-    name: 'coco_dataset'
-    dataset: 'Coco'  # 'coco' 'hpatches'
+    name: 'Hpatches_dataset'
+    dataset: 'hpatches'  # 'coco' 'hpatches'
     alteration: 'all'  # 'all' 'i' 'v'
     preprocessing:
         resize: [240, 320]  # [240, 320] for HPatches and False for coco

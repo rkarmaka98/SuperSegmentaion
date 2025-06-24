@@ -6,3 +6,4 @@ datasets/COCO/*
 datasets/draw_*
 datasets/gaussian_noise*
 runs/*
+logs/superpoint_hpatches_test/predictions/*

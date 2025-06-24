@@ -148,7 +148,7 @@ def sample_homography(
         perspective_amplitude_y=0.1, patch_ratio=0.5, max_angle=pi/2,
         allow_artifacts=False, translation_overflow=0.):
     import tensorflow as tf
-    from tensorflow.contrib.image import transform as H_transform
+    from tensorflow_addons.image import transform as H_transform
     """Sample a random valid homography.
 
     Computes the homography transformation between a random patch in the original image

@@ -41,6 +41,10 @@ class Coco(data.Dataset):
         },
         'homography_adaptation': {
             'enable': False
+        },
+        "gaussian_label": {
+            "enable": False,
+            "params": {},
         }
     }
 

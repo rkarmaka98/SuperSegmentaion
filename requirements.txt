@@ -8,7 +8,7 @@ matplotlib
 imageio
 tqdm
 tensorflow[and-cuda]
-torch.utils.tensorboard
+# torch.utils.tensorboard
 tqdm
 pyyaml
 imageio
@@ -19,3 +19,4 @@ pandas
 torchinfo
 kornia
 coloredlogs
+tensorflow-addons
