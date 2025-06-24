@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.contrib.image import transform as H_transform
+from tensorflow_addons.image import transform as H_transform
 from math import pi
 import cv2 as cv
 
