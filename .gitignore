@@ -2,3 +2,4 @@ datasets/HPatches/*
 *.Jarvis
 *.pyc
 logs/*
+datasets/COCO/*
