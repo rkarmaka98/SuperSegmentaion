@@ -16,7 +16,7 @@ class Coco(data.Dataset):
         'labels': None,
         'cache_in_memory': False,
         'validation_size': 100,
-        'truncate': None,
+        'truncate': 50,
         'preprocessing': {
             'resize': [240, 320]
         },
@@ -54,11 +54,12 @@ class Coco(data.Dataset):
         self.action = 'train' if task == 'train' else 'val'
 
         # get files
-        base_path = Path(DATA_PATH, 'COCO/' + task + '2014/')
+        base_path = Path(DATA_PATH, 'COCO/' + task + '2017/')
         # base_path = Path(DATA_PATH, 'COCO_small/' + task + '2014/')
         image_paths = list(base_path.iterdir())
-        # if config['truncate']:
-        #     image_paths = image_paths[:config['truncate']]
+        # print(config)
+        if config['truncate']:
+            image_paths = image_paths[:config['truncate']]
         names = [p.stem for p in image_paths]
         image_paths = [str(p) for p in image_paths]
         files = {'image_paths': image_paths, 'names': names}
