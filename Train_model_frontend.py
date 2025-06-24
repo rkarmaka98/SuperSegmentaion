@@ -774,13 +774,13 @@ class Train_model_frontend(object):
             pts_nms = getPtsFromHeatmap(semi_thd, conf_thresh, nms_dist)
             semi_thd_nms_sample = np.zeros_like(semi_thd)
             semi_thd_nms_sample[
-                pts_nms[1, :].astype(np.int), pts_nms[0, :].astype(np.int)
+                pts_nms[1, :].astype(np.int64), pts_nms[0, :].astype(np.int64)
             ] = 1
 
             label_sample = torch.squeeze(labels_2D[idx, :, :, :])
             # pts_nms = getPtsFromHeatmap(label_sample.numpy(), conf_thresh, nms_dist)
             # label_sample_rms_sample = np.zeros_like(label_sample.numpy())
-            # label_sample_rms_sample[pts_nms[1, :].astype(np.int), pts_nms[0, :].astype(np.int)] = 1
+            # label_sample_rms_sample[pts_nms[1, :].astype(np.int64), pts_nms[0, :].astype(np.int64)] = 1
             label_sample_nms_sample = label_sample
 
             if idx < 5:

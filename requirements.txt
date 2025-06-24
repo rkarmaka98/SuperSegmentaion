@@ -1,14 +1,14 @@
-# torch >= 0.4.1
-# torchvision
+--extra-index-url https://download.pytorch.org/whl/cu128
+
 argparse
 scipy
-opencv-python==3.4.2.16
-opencv-contrib-python==3.4.2.16
+opencv-python
+opencv-contrib-python
 matplotlib
 imageio
 tqdm
-tensorflow==1.14.0
-tensorboardX
+tensorflow[and-cuda]
+torch.utils.tensorboard
 tqdm
 pyyaml
 imageio
@@ -16,6 +16,6 @@ imgaug
 jupyter
 scikit-learn
 pandas
-torchgeometry
-torchsummary
+torchinfo
+kornia
 coloredlogs

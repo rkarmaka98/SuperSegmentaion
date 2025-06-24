@@ -329,7 +329,7 @@ def add_shade(img, keypoints, random_state=None, nb_ellipses=20,
                       (kernel_size_interval[1] - kernel_size_interval[0]))
     if (kernel_size % 2) == 0:  # kernel_size has to be odd
         kernel_size += 1
-    mask = cv.GaussianBlur(mask.astype(np.float), (kernel_size, kernel_size), 0)
+    mask = cv.GaussianBlur(mask.astype(np.float64), (kernel_size, kernel_size), 0)
     shaded = img * (1 - transparency * mask/255.)
     shaded = np.clip(shaded, 0, 255)
     return (shaded.astype(np.uint8), keypoints)
@@ -346,8 +346,8 @@ def add_fog(img, keypoints, random_state=None, max_nb_ellipses=20,
     if random_state is None:
         random_state = np.random.RandomState(None)
 
-    centers = np.empty((0, 2), dtype=np.int)
-    rads = np.empty((0, 1), dtype=np.int)
+    centers = np.empty((0, 2), dtype=np.int64)
+    rads = np.empty((0, 1), dtype=np.int64)
     min_dim = min(img.shape) / 4
     shaded_img = img.copy()
     for i in range(max_nb_ellipses):

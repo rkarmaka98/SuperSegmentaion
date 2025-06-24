@@ -224,7 +224,7 @@ if __name__ == '__main__':
     train_agent = Train_model_subpixel(config, device=device)
     train_agent.print()
     # writer from tensorboard
-    from tensorboardX import SummaryWriter
+    from torch.utils.tensorboard import SummaryWriter
     writer = SummaryWriter()
     train_agent.writer = writer
 

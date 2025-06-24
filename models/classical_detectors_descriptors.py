@@ -14,9 +14,9 @@ def classical_detector_descriptor(im, **config):
         keypoints = np.array([k.pt for k in keypoints]).astype(int)
         desc = np.array(desc)
 
-        detections = np.zeros(im.shape[:2], np.float)
+        detections = np.zeros(im.shape[:2], np.float64)
         detections[keypoints[:, 1], keypoints[:, 0]] = responses
-        descriptors = np.zeros((im.shape[0], im.shape[1], 128), np.float)
+        descriptors = np.zeros((im.shape[0], im.shape[1], 128), np.float64)
         descriptors[keypoints[:, 1], keypoints[:, 0]] = desc
 
     elif config['method'] == 'orb':
@@ -26,9 +26,9 @@ def classical_detector_descriptor(im, **config):
         keypoints = np.array([k.pt for k in keypoints]).astype(int)
         desc = np.array(desc)
 
-        detections = np.zeros(im.shape[:2], np.float)
+        detections = np.zeros(im.shape[:2], np.float64)
         detections[keypoints[:, 1], keypoints[:, 0]] = responses
-        descriptors = np.zeros((im.shape[0], im.shape[1], 32), np.float)
+        descriptors = np.zeros((im.shape[0], im.shape[1], 32), np.float64)
         descriptors[keypoints[:, 1], keypoints[:, 0]] = desc
 
     detections = detections.astype(np.float32)

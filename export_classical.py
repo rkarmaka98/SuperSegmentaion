@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from utils.utils import tensor2array, save_checkpoint, load_checkpoint, save_path_formatter
 from settings import EXPER_PATH

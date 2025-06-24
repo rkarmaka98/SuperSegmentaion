@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 import cv2
 import matplotlib.pyplot as plt
 

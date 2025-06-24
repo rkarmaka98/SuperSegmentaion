@@ -1,2 +1,5 @@
-torch
+--extra-index-url https://download.pytorch.org/whl/cu128
+
 torchvision
+torch
+torchaudio 
