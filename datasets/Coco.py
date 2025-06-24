@@ -58,8 +58,8 @@ class Coco(data.Dataset):
         # base_path = Path(DATA_PATH, 'COCO_small/' + task + '2014/')
         image_paths = list(base_path.iterdir())
         # print(config)
-        if config['truncate']:
-            image_paths = image_paths[:config['truncate']]
+        if self.config['truncate']:
+            image_paths = image_paths[:self.config['truncate']]
         names = [p.stem for p in image_paths]
         image_paths = [str(p) for p in image_paths]
         files = {'image_paths': image_paths, 'names': names}
