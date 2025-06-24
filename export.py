@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 from imageio import imread
 from tqdm import tqdm
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 ## torch
 import torch

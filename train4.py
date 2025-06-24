@@ -14,7 +14,7 @@ import torch
 import torch.optim
 import torch.utils.data
 
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 # from utils.utils import tensor2array, save_checkpoint, load_checkpoint, save_path_formatter
 from utils.utils import getWriterPath

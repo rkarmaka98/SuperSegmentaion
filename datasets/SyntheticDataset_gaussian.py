@@ -33,7 +33,7 @@ from settings import DATA_PATH
 from settings import SYN_TMPDIR
 
 # DATA_PATH = '.'
-import multiprocessing
+# import multiprocessing
 
 TMPDIR = SYN_TMPDIR  # './datasets/' # you can define your tmp dir
 
@@ -112,7 +112,7 @@ class SyntheticDataset_gaussian(data.Dataset):
         # temp_dir = Path(os.environ['TMPDIR'], primitive)
         temp_dir = Path(TMPDIR, primitive)
 
-        tf.logging.info("Generating tarfile for primitive {}.".format(primitive))
+        tf.compat.v1.logging.info("Generating tarfile for primitive {}.".format(primitive))
         synthetic_dataset.set_random_state(
             np.random.RandomState(config["generation"]["random_seed"])
         )
@@ -137,8 +137,8 @@ class SyntheticDataset_gaussian(data.Dataset):
                 image = cv2.GaussianBlur(image, (b, b), 0)
                 points = (
                     points
-                    * np.array(config["preprocessing"]["resize"], np.float)
-                    / np.array(config["generation"]["image_size"], np.float)
+                    * np.array(config["preprocessing"]["resize"], np.float64)
+                    / np.array(config["generation"]["image_size"], np.float64)
                 )
                 image = cv2.resize(
                     image,
@@ -154,7 +154,7 @@ class SyntheticDataset_gaussian(data.Dataset):
         tar.add(temp_dir, arcname=primitive)
         tar.close()
         shutil.rmtree(temp_dir)
-        tf.logging.info("Tarfile dumped to {}.".format(tar_path))
+        tf.compat.v1.logging.info("Tarfile dumped to {}.".format(tar_path))
 
     def parse_primitives(self, names, all_primitives):
         p = (
@@ -215,7 +215,7 @@ class SyntheticDataset_gaussian(data.Dataset):
             # self.params_transform = {'crop_size_y': 120, 'crop_size_x': 160, 'stride': 1, 'sigma': self.config['gaussian_label']['sigma']}
             self.gaussian_label = True
 
-        self.pool = multiprocessing.Pool(6)
+        # self.pool = multiprocessing.Pool(6)
 
         # Parse drawing primitives
         primitives = self.parse_primitives(

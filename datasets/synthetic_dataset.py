@@ -46,7 +46,7 @@ def add_salt_and_pepper(img):
     img[white > 0] = 255
     img[black > 0] = 0
     cv.blur(img, (5, 5), img)
-    return np.empty((0, 2), dtype=np.int)
+    return np.empty((0, 2), dtype=np.int64)
 
 
 def generate_background(size=(960, 1280), nb_blobs=100, min_rad_ratio=0.01,
@@ -141,8 +141,8 @@ def draw_lines(img, nb_lines=10):
       nb_lines: maximal number of lines
     """
     num_lines = random_state.randint(1, nb_lines)
-    segments = np.empty((0, 4), dtype=np.int)
-    points = np.empty((0, 2), dtype=np.int)
+    segments = np.empty((0, 4), dtype=np.int64)
+    points = np.empty((0, 2), dtype=np.int64)
     background_color = int(np.mean(img))
     min_dim = min(img.shape)
     for i in range(num_lines):
@@ -231,10 +231,10 @@ def draw_multiple_polygons(img, max_sides=8, nb_polygons=30, **extra):
       max_sides: maximal number of sides + 1
       nb_polygons: maximal number of polygons
     """
-    segments = np.empty((0, 4), dtype=np.int)
+    segments = np.empty((0, 4), dtype=np.int64)
     centers = []
     rads = []
-    points = np.empty((0, 2), dtype=np.int)
+    points = np.empty((0, 2), dtype=np.int64)
     background_color = int(np.mean(img))
     for i in range(nb_polygons):
         num_corners = random_state.randint(3, max_sides)
@@ -306,8 +306,8 @@ def draw_ellipses(img, nb_ellipses=20):
     Parameters:
       nb_ellipses: maximal number of ellipses
     """
-    centers = np.empty((0, 2), dtype=np.int)
-    rads = np.empty((0, 1), dtype=np.int)
+    centers = np.empty((0, 2), dtype=np.int64)
+    rads = np.empty((0, 1), dtype=np.int64)
     min_dim = min(img.shape[0], img.shape[1]) / 4
     background_color = int(np.mean(img))
     for i in range(nb_ellipses):
@@ -328,7 +328,7 @@ def draw_ellipses(img, nb_ellipses=20):
         col = get_random_color(background_color)
         angle = random_state.rand() * 90
         cv.ellipse(img, (x, y), (ax, ay), angle, 0, 360, col, -1)
-    return np.empty((0, 2), dtype=np.int)
+    return np.empty((0, 2), dtype=np.int64)
 
 
 def draw_star(img, nb_branches=6):
@@ -683,7 +683,7 @@ def draw_cube(img, min_size_ratio=0.2, min_angle_rot=math.pi / 10,
 def gaussian_noise(img):
     """ Apply random noise to the image """
     cv.randu(img, 0, 255)
-    return np.empty((0, 2), dtype=np.int)
+    return np.empty((0, 2), dtype=np.int64)
 
 
 def draw_interest_points(img, points):

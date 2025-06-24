@@ -1,0 +1,87 @@
+{
+    "configurations": [
+        
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": "${command:pickArgs}",
+        },
+
+            {
+            "name": "Training MagicPoint",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\train4.py",
+            "args": [
+                "train_base",
+                "configs/magicpoint_shapes_pair.yaml",
+                "magicpoint_synth",
+                "--eval"
+            ],
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            },
+            {
+            "name": "Exporting detections via Homography Adaptation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_detector_homoAdapt",
+                "configs/magicpoint_coco_export.yaml",
+                "magicpoint_synth_homoAdapt_coco"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            },
+            {
+            "name": "Training SuperPoint",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\train4.py",
+            "args": [
+                "train_joint",
+                "configs/superpoint_coco_train_heatmap.yaml",
+                "superpoint_coco",
+                "--eval",
+                "--debug"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            },
+            {
+            "name": "Evaluating",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_descriptor",
+                "configs/magicpoint_repeatability_heatmap.yaml",
+                "superpoint_hpatches_test"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            },
+            {
+            "name": "Python: Current File (Windows, debugpy)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            }
+    ]
+
+}

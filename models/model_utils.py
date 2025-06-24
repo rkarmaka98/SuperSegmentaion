@@ -164,7 +164,7 @@ class SuperPointNet_process(object):
         pts_nms = getPtsFromHeatmap(heatmap, conf_thresh, nms_dist)
 
         semi_thd_nms_sample = np.zeros_like(heatmap)
-        semi_thd_nms_sample[pts_nms[1, :].astype(np.int), pts_nms[0, :].astype(np.int)] = 1
+        semi_thd_nms_sample[pts_nms[1, :].astype(np.int64), pts_nms[0, :].astype(np.int64)] = 1
         
         
         return semi_thd_nms_sample
