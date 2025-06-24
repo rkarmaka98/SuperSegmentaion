@@ -1,6 +1,7 @@
 datasets/HPatches/*
 *.Jarvis
 *.pyc
+*.png
 datasets/COCO/*
 datasets/draw_*
 datasets/gaussian_noise*
