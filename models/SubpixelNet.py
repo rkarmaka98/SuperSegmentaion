@@ -46,8 +46,8 @@ class SubpixelNet(torch.nn.Module):
         coor: (B, N, 2)  (x, y)
 
     """
-    import torchgeometry as tgm
-    m = tgm.contrib.SpatialSoftArgmax2d()
+    import kornia as tgm
+    m = tgm.geometry.subpix.SpatialSoftArgmax2d()
     coords = m(patches)  # 1x4x2
     return coords
 

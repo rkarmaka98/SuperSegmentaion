@@ -16,7 +16,7 @@ class Coco(data.Dataset):
         'labels': None,
         'cache_in_memory': False,
         'validation_size': 100,
-        'truncate': 50,
+        'truncate': 100,
         'preprocessing': {
             'resize': [240, 320]
         },

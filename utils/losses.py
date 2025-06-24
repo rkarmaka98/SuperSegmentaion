@@ -116,8 +116,8 @@ def soft_argmax_2d(patches, normalized_coordinates=True):
         coor: (B, N, 2)  (x, y)
 
     """
-    import torchgeometry as tgm
-    m = tgm.contrib.SpatialSoftArgmax2d(normalized_coordinates=normalized_coordinates)
+    import kornia as tgm
+    m = tgm.geometry.subpix.SpatialSoftArgmax2d(normalized_coordinates=normalized_coordinates)
     coords = m(patches)  # 1x4x2
     return coords
 
