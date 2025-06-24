@@ -70,7 +70,7 @@
             "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
             "console": "integratedTerminal",
             "stopOnEntry": true,
-            "justMyCode": false
+            "justMyCode": true
             },
             {
             "name": "Python: Current File (Windows, debugpy)",

@@ -2,9 +2,9 @@ data:
     # name: 'coco'
     dataset: 'Coco' # 'coco'
 
-    labels: logs\magicpoint_synth_homoAdapt_coco
-    root: # datasets/COCO
-    root_split_txt: # /datasets/COCO
+    labels: logs/magicpoint_synth_homoAdapt_coco/predictions
+    root: datasets/COCO
+    root_split_txt: /datasets/COCO
 
     gaussian_label:
         enable: true
@@ -93,7 +93,7 @@ model:
 
 retrain: True # set true for new model
 reset_iter: True # set true to set the iteration number to 0
-train_iter: 5 # 170000
+train_iter: 100 # 170000
 validation_interval: 200 # 2000
 tensorboard_interval: 200 # 200
 save_interval: 200 # 2000
