@@ -1,4 +1,4 @@
-datasets/HPatches/*
+datasets/*
 *.Jarvis
 *.pyc
 *.png

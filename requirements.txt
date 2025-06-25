@@ -16,7 +16,10 @@ imgaug
 jupyter
 scikit-learn
 pandas
+numpy
 torchinfo
 kornia
 coloredlogs
 tensorflow-addons
+
+
