@@ -10,13 +10,18 @@ from utils.tools import dict_update
 import cv2
 from utils.utils import homography_scaling_torch as homography_scaling
 from utils.utils import filter_points
+from pycocotools.coco import COCO
 
 class Coco(data.Dataset):
     default_config = {
         'labels': None,
+        'segmentation_labels': None,
+        'num_segmentation_classes': 0,
         'cache_in_memory': False,
         'validation_size': 100,
         'truncate': 100,
+        # COCO instance segmentation masks
+        'load_segmentation': True,
         'preprocessing': {
             'resize': [240, 320]
         },
@@ -53,6 +58,7 @@ class Coco(data.Dataset):
         # Update config
         self.config = self.default_config
         self.config = dict_update(self.config, config)
+        self.num_segmentation_classes = self.config.get('num_segmentation_classes', 0)
 
         self.transforms = transform
         self.action = 'train' if task == 'train' else 'val'
@@ -95,6 +101,17 @@ class Coco(data.Dataset):
                 sample = {'image': img, 'name': name}
                 sequence_set.append(sample)
         self.samples = sequence_set
+
+        # load segmentation annotations if set in config
+        self.cooc = None
+        self.filename_to_id = {}
+        if self.config.get('load_segmentation', False):
+            annotation_file = Path(DATA_PATH, 'COCO/annotations',f'instances_{task}2017.json')
+            if annotation_file.exists():
+                self.coco = COCO(str(annotation_file))
+                self.filename_to_id={
+                    img_info['file_name']: img_info['id'] for img_info in self.coco.dataset['images']
+                }
 
         self.init_var()
 
@@ -245,6 +262,7 @@ class Coco(data.Dataset):
         from numpy.linalg import inv
         sample = self.samples[index]
         sample = self.format_sample(sample)
+        name = sample['name']
         input  = {}
         input.update(sample)
         # image
@@ -263,6 +281,32 @@ class Coco(data.Dataset):
         valid_mask = self.compute_valid_mask(torch.tensor([H, W]), inv_homography=torch.eye(3))
         input.update({'image': img_aug})
         input.update({'valid_mask': valid_mask})
+
+        if self.coco is not None:
+            file_name = Path(sample['image']).name
+            img_id = self.filename_to_id.get(file_name)
+            mask = np.zeros((H, W), dtype=np.uint8)
+            if img_id is not None:
+                ann_ids = self.coco.getAnnIds(imgIds=img_id)
+                anns = self.coco.loadAnns(ann_ids)
+                for ann in anns:
+                    anno_mask = self.coco.annToMask(ann)
+                    anno_mask = cv2.resize(anno_mask, (W,H), interpolation=cv2.INTER_NEAREST)
+                    mask = np.maximum(mask, anno_mask)
+            input['segmentation_mask'] = torch.tensor(mask, dtype=torch.uint8).view(1, H, W)
+
+        if self.config.get('num_segmentation_classes', 0) > 0:
+            seg_path = None
+            if self.config.get('segmentation_labels'):
+                seg_path = Path(self.config['segmentation_labels'], self.action, f"{name}.png")
+            if seg_path and seg_path.exists():
+                seg_mask = cv2.imread(str(seg_path), cv2.IMREAD_GRAYSCALE)
+                seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST)
+                seg_mask = torch.tensor(seg_mask, dtype=torch.long)
+            else:
+                seg_mask = torch.zeros((H, W), dtype=torch.long)
+            input.update({'segmentation_mask': seg_mask})
+
 
         if self.config['homography_adaptation']['enable']:
             # img_aug = torch.tensor(img_aug)

@@ -175,6 +175,12 @@ def export_descriptor(config, output_dir, args):
             }
         )
 
+        if "segmentation_mask" in sample:
+            pred.update({"segmentation_mask": squeezeToNumpy(sample["segmentation_mask"])})
+        elif "mask" in sample:
+            pred.update({"segmentation_mask": squeezeToNumpy(sample["mask"])})
+
+
         if outputMatches == True:
             matches = tracker.get_matches()
             print("matches: ", matches.transpose().shape)
@@ -330,6 +336,10 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
         ## save keypoints
         pred = {}
         pred.update({"pts": pts})
+        if "segmentation_mask" in sample:
+            pred.update({"segmentation_mask": np.squeeze(sample["segmentation_mask"])})
+        elif "mask" in sample:
+            pred.update({"segmentation_mask": np.squeeze(sample["mask"])})
 
         ## - make directories
         filename = str(name)
