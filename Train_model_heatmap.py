@@ -81,6 +81,8 @@ class Train_model_heatmap(Train_model_frontend):
         self._eval = True
         self.cell_size = 8
         self.subpixel = False
+        self.lambda_segmentation = self.config["model"].get("lambda_segmentation", 1.0)
+        self.num_segmentation_classes = self.config["model"].get("num_segmentation_classes", 0)
 
         self.max_iter = config["train_iter"]
 
@@ -322,6 +324,20 @@ class Train_model_heatmap(Train_model_frontend):
         if lambda_loss > 0:
             loss += lambda_loss * loss_desc
 
+        seg_loss = torch.tensor(0.0, device=self.device)
+        if self.lambda_segmentation > 0 and sample.get("segmentation_mask") is not None:
+            if "segmentation" in outs:
+                seg_pred = outs["segmentation"]
+                seg_target = sample["segmentation_mask"].long().to(self.device)
+                if seg_pred.shape[-2:] != seg_target.shape[-2:]:
+                    seg_pred = F.interpolate(
+                        seg_pred, size=seg_target.shape[-2:], mode="bilinear", align_corners=False
+                    )
+                seg_loss = F.cross_entropy(
+                    outs["segmentation"], sample["segmentation_mask"].long().to(self.device)
+                )
+                loss += self.lambda_segmentation * seg_loss
+
         ##### try to minimize the error ######
         add_res_loss = False
         if add_res_loss and n_iter % 10 == 0:
@@ -374,6 +390,7 @@ class Train_model_heatmap(Train_model_frontend):
                 "loss": loss,
                 "loss_det": loss_det,
                 "loss_det_warp": loss_det_warp,
+                "seg_loss": seg_loss,
                 "positive_dist": positive_dist,
                 "negative_dist": negative_dist,
             }

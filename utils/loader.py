@@ -48,6 +48,9 @@ def dataLoader(config, dataset='syn', warp_input=False, train=True, val=True):
     workers_train = training_params.get('workers_train', 1) # 16
     workers_val   = training_params.get('workers_val', 1) # 16
         
+    if config['model'].get('num_segmentation_classes', 0) > 0:
+        config['data']['num_segmentation_classes'] = config['model']['num_segmentation_classes']
+
     logging.info(f"workers_train: {workers_train}, workers_val: {workers_val}")
     data_transforms = {
         'train': transforms.Compose([

@@ -75,6 +75,46 @@ def to3dim(img):
         img = img[:, :, np.newaxis]
     return img
 
+
+def compute_miou(pred_mask, gt_mask, num_classes=None):
+    """Compute mean Intersection over Union for segmentation masks.
+
+    Parameters
+    ----------
+    pred_mask : np.ndarray
+        Predicted segmentation mask.
+    gt_mask : np.ndarray
+        Ground truth segmentation mask.
+    num_classes : int, optional
+        Number of classes. If ``None`` the union of unique values from both
+        masks is used.
+
+    Returns
+    -------
+    float
+        The mean IoU score.
+    """
+    if pred_mask.shape != gt_mask.shape:
+        raise ValueError("Prediction and ground truth masks must have the same shape")
+
+    if num_classes is None:
+        classes = np.unique(np.concatenate([pred_mask.ravel(), gt_mask.ravel()]))
+    else:
+        classes = range(num_classes)
+
+    ious = []
+    for cls in classes:
+        pred_c = pred_mask == cls
+        gt_c = gt_mask == cls
+        union = np.logical_or(pred_c, gt_c).sum()
+        if union == 0:
+            continue
+        intersection = np.logical_and(pred_c, gt_c).sum()
+        ious.append(intersection / union)
+
+    return float(np.mean(ious)) if ious else 0.0
+
+
 def evaluate(args, **options):
     # path = '/home/yoyee/Documents/SuperPoint/superpoint/logs/outputs/superpoint_coco/'
     path = args.path
@@ -85,6 +125,7 @@ def evaluate(args, **options):
     mscore = []
     mAP = []
     localization_err = []
+    segmentation_iou = []
     rep_thd = 3
     save_file = path + "/result.txt"
     inliers_method = 'cv'
@@ -121,6 +162,13 @@ def evaluate(args, **options):
         f_num = f[:-4]
         data = np.load(path + '/' + f)
         print("load successfully. ", f)
+
+        if args.evaluate_segmentation:
+            pred_key = next((k for k in ['pred_mask', 'segmentation_mask', 'mask_pred'] if k in data.files), None)
+            gt_key = next((k for k in ['gt_mask', 'segmentation_gt', 'mask_gt'] if k in data.files), None)
+            if pred_key and gt_key:
+                miou = compute_miou(data[pred_key], data[gt_key])
+                segmentation_iou.append(miou)
 
         # unwarp
         # prob = data['prob']
@@ -395,7 +443,9 @@ def evaluate(args, **options):
 
         print("end")
 
-
+    if args.evaluate_segmentation and segmentation_iou:
+        miou_mean = float(np.mean(segmentation_iou))
+        print("segmentation mIoU", miou_mean)
 
     # save to files
     with open(save_file, "a") as myfile:
@@ -416,6 +466,8 @@ def evaluate(args, **options):
                 myfile.write("nn mean AP: " + str(mAP_m) + '\n')
             myfile.write("matching score: " + str(mscore_m) + '\n')
 
+        if args.evaluate_segmentation and segmentation_iou:
+            myfile.write("segmentation mIoU: " + str(miou_mean) + '\n')
 
 
         if verbose:
@@ -441,6 +493,7 @@ def evaluate(args, **options):
         'homography_thresh': homography_thresh,
         'mscore': mscore,
         'mAP': np.array(mAP),
+        'segmentation_iou': np.array(segmentation_iou),
         # 'est_H_mean_dist': est_H_mean_dist
     }
 
@@ -465,5 +518,10 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--repeatibility', action='store_true')
     parser.add_argument('-homo', '--homography', action='store_true')
     parser.add_argument('-plm', '--plotMatching', action='store_true')
+    parser.add_argument(
+        '--evaluate-segmentation',
+        action='store_true',
+        help='compute segmentation metrics when segmentation masks are present',
+    )
     args = parser.parse_args()
     evaluate(args)

@@ -17,6 +17,7 @@ jupyter
 scikit-learn
 pandas
 numpy
+pycocotools
 torchinfo
 kornia
 coloredlogs

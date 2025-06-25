@@ -11,7 +11,7 @@ import numpy as np
 # from models.SubpixelNet import SubpixelNet
 class SuperPointNet_gauss2(torch.nn.Module):
     """ Pytorch definition of SuperPoint Network. """
-    def __init__(self, subpixel_channel=1):
+    def __init__(self, subpixel_channel=1, num_classes=1):
         super(SuperPointNet_gauss2, self).__init__()
         c1, c2, c3, c4, c5, d1 = 64, 64, 128, 128, 256, 256
         det_h = 65
@@ -36,6 +36,11 @@ class SuperPointNet_gauss2(torch.nn.Module):
         self.bnDa = nn.BatchNorm2d(c5)
         self.convDb = torch.nn.Conv2d(c5, d1, kernel_size=1, stride=1, padding=0)
         self.bnDb = nn.BatchNorm2d(d1)
+        # Segmentation Head
+        self.seg_conv1 = nn.Conv2d(c4, 128, kernel_size=3, padding=1)
+        self.seg_bn1 = nn.BatchNorm2d(128)
+        self.seg_conv2 = nn.Conv2d(128, num_classes, kernel_size=1)
+
         self.output = None
 
 
@@ -61,10 +66,13 @@ class SuperPointNet_gauss2(torch.nn.Module):
         # Descriptor Head.
         cDa = self.relu(self.bnDa(self.convDa(x4)))
         desc = self.bnDb(self.convDb(cDa))
+        # Segmentation Head producing per-pixel class logits
+        seg = self.relu(self.seg_bn1(self.seg_conv1(x4)))
+        seg_logits = self.seg_conv2(seg)
 
         dn = torch.norm(desc, p=2, dim=1) # Compute the norm.
         desc = desc.div(torch.unsqueeze(dn, 1)) # Divide by norm to normalize.
-        output = {'semi': semi, 'desc': desc}
+        output = {'semi': semi, 'desc': desc, 'segmentation': seg_logits}
         self.output = output
 
         return output

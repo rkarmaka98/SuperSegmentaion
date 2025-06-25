@@ -63,7 +63,10 @@ class Train_model_frontend(object):
         "train_iter": 170000,
         "save_interval": 2000,
         "tensorboard_interval": 200,
-        "model": {"subpixel": {"enable": False}},
+        "model": {"subpixel": {"enable": False},
+                  "lambda_segmentaion": 1.0, # weight of optional segmentation loss
+                  "num_segmentation_classes": 0 # number of classes for segmentation head
+                  },
     }
 
     def __init__(self, config, save_path=Path("."), device="cpu", verbose=False):
@@ -95,6 +98,8 @@ class Train_model_frontend(object):
         self.cell_size = 8
         self.subpixel = False
         self.loss = 0
+        self.lambda_segmentation = self.config["model"]["lambda_segmentation"]
+        self.num_segmentation_classes = self.config["model"]["num_segmentation_classes"]
 
         self.max_iter = config["train_iter"]
 
@@ -143,6 +148,8 @@ class Train_model_frontend(object):
 
         print("learning_rate: ", self.config["model"]["learning_rate"])
         print("lambda_loss: ", self.config["model"]["lambda_loss"])
+        print("lambda_segmentation: ", self.config["model"]["lambda_segmentation"])
+        print("num_segmentation_classes: ", self.config["model"]["num_segmentation_classes"])
         print("detection_threshold: ", self.config["model"]["detection_threshold"])
         print("batch_size: ", self.config["model"]["batch_size"])
 

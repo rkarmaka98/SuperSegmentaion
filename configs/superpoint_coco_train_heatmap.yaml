@@ -13,6 +13,8 @@ data:
 
 
     cache_in_memory: false
+    # Adding COCO segmentation tasks
+    load_segmentation: true
     preprocessing:
         resize: [240, 320]
         # resize: [480, 640]
@@ -69,6 +71,8 @@ model:
     learning_rate: 0.0001 # 0.0001
     detection_threshold: 0.015 # 0.015
     lambda_loss: 1 # 1
+    lambda_segmentation: 1.0
+    num_segmentation_classes: 2    
     nms: 4
     dense_loss:
         enable: false
