@@ -70,8 +70,23 @@ class Val_model_heatmap(SuperPointFrontend_torch):
 
         checkpoint = torch.load(self.weights_path,
                                 map_location=lambda storage, loc: storage)
-        self.net.load_state_dict(checkpoint['model_state_dict'])
-
+        try:
+            self.net.load_state_dict(checkpoint["model_state_dict"])
+        except RuntimeError as err:
+            # add more context when segmentation classes mismatch
+            ckpt_classes = (
+                checkpoint["model_state_dict"].get("seg_conv2.weight")
+                .shape[0]
+                if "seg_conv2.weight" in checkpoint["model_state_dict"]
+                else "unknown"
+            )
+            model_classes = getattr(self.net.seg_conv2, "out_channels", "unknown")
+            raise RuntimeError(
+                f"Could not load model weights: {err}\n"
+                f"Checkpoint segmentation classes: {ckpt_classes}, "
+                f"model expects: {model_classes}. "
+                "Ensure 'num_segmentation_classes' matches the training setup."
+            ) from err
         self.net = self.net.to(self.device)
         logging.info('successfully load pretrained model from: %s', self.weights_path)
         pass
