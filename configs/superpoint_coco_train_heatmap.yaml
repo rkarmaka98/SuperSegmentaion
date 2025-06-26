@@ -16,7 +16,7 @@ data:
     # Adding COCO segmentation tasks
     load_segmentation: false
     load_panoptic: true  # set true to train with panoptic labels
-    num_segmentation_classes: 133 
+    num_segmentation_classes: 171 
     preprocessing:
         resize: [240, 320]
         # resize: [480, 640]
