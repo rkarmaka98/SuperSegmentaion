@@ -13,6 +13,7 @@ from evaluations.descriptor_evaluation import compute_homography
 from evaluations.detector_evaluation import compute_repeatability
 import cv2
 import matplotlib.pyplot as plt
+import json
 
 import logging
 import os
@@ -115,7 +116,7 @@ def compute_miou(pred_mask, gt_mask, num_classes=None):
     return float(np.mean(ious)) if ious else 0.0
 
 
-def colorize_mask(mask, num_classes=None):
+def colorize_mask(mask, num_classes=None, class_colors=None):
     """Convert a segmentation mask to a color image for visualization.
 
     * Generates unique colors for any number of classes.
@@ -125,11 +126,15 @@ def colorize_mask(mask, num_classes=None):
     if num_classes is None:
         num_classes = int(mask.max()) + 1 if mask.size > 0 else 1
 
-    if num_classes <= 20:
+    if class_colors is not None:
+        colors = np.asarray(class_colors)
+        assert colors.shape[1] == 3
+    elif num_classes <= 20:
+        # use matplotlib's tab20 for small numbers of classes
         cmap = plt.get_cmap("tab20")
         colors = cmap(np.arange(num_classes))[:, :3]
     else:
-        # Generate colors in HSV space to avoid repetition
+        # Generate distinct colors in HSV space to avoid repetition
         hsv = np.stack([
             np.linspace(0, 1, num_classes, endpoint=False),
             np.ones(num_classes),
@@ -141,7 +146,7 @@ def colorize_mask(mask, num_classes=None):
     return colors[mask.astype(int)]
 
 
-def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None):
+def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None, class_colors=None):
     """Overlay a colorized mask on top of an image.
 
     Parameters
@@ -160,7 +165,7 @@ def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None):
     np.ndarray
         BGR image showing ``image`` with the colorized ``mask`` overlaid.
     """
-    color_mask = colorize_mask(mask, num_classes)
+    color_mask = colorize_mask(mask, num_classes, class_colors)
 
     # Ensure the base image has three channels
     if image.ndim == 2 or image.shape[-1] == 1:
@@ -178,11 +183,10 @@ def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None):
         )
 
 
-    # Convert floating point images to 8-bit
+    # Convert floating point images to 8-bit and blend with mask
     if img_color.dtype != np.uint8:
         img_color = cv2.convertScaleAbs(img_color, alpha=255.0)
-
-        overlay = cv2.addWeighted(img_color, 1 - alpha, color_mask, alpha, 0)
+    overlay = cv2.addWeighted(img_color, 1 - alpha, color_mask, alpha, 0)
 
     # Draw legend for the classes present in the mask
     unique_classes = np.unique(mask)
@@ -198,7 +202,7 @@ def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None):
     row_height = patch + 15
     for cls in unique_classes:
         cls = int(cls)
-        color = colorize_mask(np.array([[cls]]), num_classes)[0, 0].tolist()
+        color = colorize_mask(np.array([[cls]]), num_classes, class_colors)[0, 0].tolist()
         cv2.rectangle(overlay, (x, y), (x + patch, y + patch), color, -1)
         cv2.putText(
             overlay,
@@ -248,6 +252,24 @@ def evaluate(args, **options):
     verbose = True
     top_K = 1000
     print("top_K: ", top_K)
+
+    class_colors = None
+    class_names = None
+    if args.category_file:
+        try:
+            with open(args.category_file, 'r') as f:
+                categories = json.load(f)
+            max_id = max(c['id'] for c in categories) + 1
+            class_colors = np.zeros((max_id, 3), dtype=np.uint8)
+            class_names = [''] * max_id
+            for c in categories:
+                cid = c['id']
+                if cid >= max_id:
+                    continue
+                class_colors[cid] = np.array(c['color'][::-1], dtype=np.uint8)
+                class_names[cid] = c.get('name', str(cid))
+        except Exception as e:
+            logging.warning(f"Failed to load categories from {args.category_file}: {e}")
 
     reproduce = True
     if reproduce:
@@ -300,10 +322,10 @@ def evaluate(args, **options):
                 if args.outputImg:
                     # visualize masks overlayed on the original image
                     base_img = data['image']
-                    imgs = [overlay_mask(base_img, pred_mask)]
+                    imgs = [overlay_mask(base_img, pred_mask, class_names=class_names, class_colors=class_colors)]
                     titles = ['pred overlay']
                     if gt_key:
-                        imgs.append(overlay_mask(base_img, data[gt_key]))
+                        imgs.append(overlay_mask(base_img, data[gt_key], class_names=class_names, class_colors=class_colors))
                         titles.append('gt overlay')
 
                     plot_imgs(imgs, titles=titles, dpi=200)
@@ -664,6 +686,12 @@ if __name__ == '__main__':
         '--evaluate-segmentation',
         action='store_true',
         help='compute segmentation metrics when segmentation masks are present',
+    )
+    parser.add_argument(
+        '--category-file',
+        type=str,
+        default=None,
+        help='path to panoptic category json with class colors',
     )
     args = parser.parse_args()
     evaluate(args)
