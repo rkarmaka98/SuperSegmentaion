@@ -148,11 +148,19 @@ python train4.py train_joint configs/superpoint_kitti_train_heatmap.yaml superpo
 ```
 python export.py export_descriptor  configs/magicpoint_repeatability_heatmap.yaml superpoint_hpatches_test
 ```
+To also export predicted segmentation masks, append `--export-segmentation`:
+```
+python export.py export_descriptor <config> <folder> --export-segmentation
+```
 #### evaluate
 ```python evaluation.py <path to npz files> [-r, --repeatibility | -o, --outputImg | -homo, --homography ]```
 - Evaluate homography estimation/ repeatability/ matching scores ...
 ```
 python evaluation.py logs/superpoint_hpatches_test/predictions --repeatibility --outputImg --homography --plotMatching
+```
+Segmentation quality can be evaluated with:
+```
+python evaluation.py <output_path> --evaluate-segmentation
 ```
 
 ### 5) Export/ Evaluate repeatability on SIFT

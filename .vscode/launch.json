@@ -65,7 +65,8 @@
             "args": [
                 "export_descriptor",
                 "configs/magicpoint_repeatability_heatmap.yaml",
-                "superpoint_hpatches_test"
+                "superpoint_hpatches_test",
+                "--export-segmentation"
             ],
             "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
             "console": "integratedTerminal",
@@ -82,7 +83,8 @@
                 "--repeatibility",
                 "--outputImg",
                 "--homography",
-                "--plotMatching"
+                "--plotMatching",
+                "--evaluate-segmentation"
             ],
             "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
             "console": "integratedTerminal",
