@@ -20,7 +20,7 @@ class Coco(data.Dataset):
         'num_segmentation_classes': 0,
         'cache_in_memory': False,
         'validation_size': 100,
-        'truncate': 100,
+        'truncate': 0,
         # COCO instance segmentation masks
         'load_segmentation': True,
         'preprocessing': {
