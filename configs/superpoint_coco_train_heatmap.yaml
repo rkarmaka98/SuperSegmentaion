@@ -14,7 +14,7 @@ data:
 
     cache_in_memory: false
     # Adding COCO segmentation tasks
-    load_segmentation: true
+    load_segmentation: false
     load_panoptic: true  # set true to train with panoptic labels
     num_segmentation_classes: 133 
     preprocessing:
