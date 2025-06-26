@@ -115,6 +115,15 @@ def compute_miou(pred_mask, gt_mask, num_classes=None):
     return float(np.mean(ious)) if ious else 0.0
 
 
+def colorize_mask(mask, num_classes=None):
+    """Convert a segmentation mask to a color image for visualization."""
+    if num_classes is None:
+        num_classes = int(mask.max()) + 1 if mask.size > 0 else 1
+    cmap = plt.get_cmap("tab20")
+    colors = (cmap(np.arange(num_classes) % cmap.N)[:, :3] * 255).astype(np.uint8)
+    return colors[mask.astype(int)]
+
+
 def evaluate(args, **options):
     # path = '/home/yoyee/Documents/SuperPoint/superpoint/logs/outputs/superpoint_coco/'
     path = args.path
@@ -149,6 +158,9 @@ def evaluate(args, **options):
         os.makedirs(path_match, exist_ok=True)
         path_rep = path + '/repeatibility' + str(rep_thd)
         os.makedirs(path_rep, exist_ok=True)
+        if args.evaluate_segmentation:
+            path_seg = path + '/segmentation'
+            os.makedirs(path_seg, exist_ok=True)
 
     # for i in range(2):
     #     f = files[i]
@@ -169,6 +181,14 @@ def evaluate(args, **options):
             if pred_key and gt_key:
                 miou = compute_miou(data[pred_key], data[gt_key])
                 segmentation_iou.append(miou)
+                if args.outputImg:
+                    # visualize predicted and ground-truth masks
+                    pred_img = colorize_mask(data[pred_key])
+                    gt_img = colorize_mask(data[gt_key])
+                    plot_imgs([pred_img, gt_img], titles=["pred", "gt"], dpi=200)
+                    plt.tight_layout()
+                    plt.savefig(os.path.join(path_seg, f_num + '.png'), dpi=300, bbox_inches='tight')
+                    plt.close('all')
 
         # unwarp
         # prob = data['prob']
