@@ -85,7 +85,9 @@
                 "--homography",
                 "--plotMatching",
                 "--evaluate-segmentation",
-                "--outputImg"
+                "--outputImg",
+                "--category-file",
+                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_coco_categories.json"
             ],
             "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
             "console": "integratedTerminal",
