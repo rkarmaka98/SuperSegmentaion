@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from pathlib import Path
 import torch.utils.data as data
+import logging
 
 # from .base_dataset import BaseDataset
 from settings import DATA_PATH, EXPER_PATH
@@ -303,7 +304,17 @@ class Coco(data.Dataset):
                 seg_mask = cv2.imread(str(seg_path), cv2.IMREAD_GRAYSCALE)
                 seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST)
                 seg_mask = torch.tensor(seg_mask, dtype=torch.long)
+                max_val = int(seg_mask.max())
+                num_cls = int(self.config.get('num_segmentation_classes', 0))
+                if max_val >= num_cls > 0:
+                    logging.warning(
+                        "Segmentation label %d exceeds num_segmentation_classes=%d in %s",
+                        max_val,
+                        num_cls,
+                        seg_path,
+                    )
             else:
+                logging.warning('Missing segmentation label file: %s', seg_path)
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
             input.update({'segmentation_mask': seg_mask})
 

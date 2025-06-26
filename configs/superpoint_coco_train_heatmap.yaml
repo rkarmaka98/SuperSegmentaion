@@ -16,7 +16,7 @@ data:
     # Adding COCO segmentation tasks
     load_segmentation: false
     load_panoptic: true  # set true to train with panoptic labels
-    num_segmentation_classes: 171 
+    num_segmentation_classes: 201 
     preprocessing:
         resize: [240, 320]
         # resize: [480, 640]
@@ -74,7 +74,7 @@ model:
     detection_threshold: 0.015 # 0.015
     lambda_loss: 1 # 1
     lambda_segmentation: 1.0
-    num_segmentation_classes: 171    
+    num_segmentation_classes: 201    
     nms: 4
     dense_loss:
         enable: false
