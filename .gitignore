@@ -3,9 +3,11 @@ datasets/tum_split/
 datasets/synthetic_shapes_v6/
 datasets/kitti/
 datasets/HPatches/
-*.pyc
+__pycache__
 datasets/COCO/
 datasets/draw_*
 datasets/gaussian_noise/
 runs/
 logs/
+notebooks/
+pretrained/
