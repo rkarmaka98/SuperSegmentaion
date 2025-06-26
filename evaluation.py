@@ -141,7 +141,7 @@ def colorize_mask(mask, num_classes=None):
     return colors[mask.astype(int)]
 
 
-def overlay_mask(image, mask, alpha=0.5, num_classes=None):
+def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None):
     """Overlay a colorized mask on top of an image.
 
     Parameters
@@ -168,12 +168,59 @@ def overlay_mask(image, mask, alpha=0.5, num_classes=None):
     else:
         img_color = image
 
+    # Resize the mask if dimensions differ
+    if color_mask.shape[:2] != img_color.shape[:2]:
+        # Nearest neighbour keeps class labels intact
+        color_mask = cv2.resize(
+            color_mask,
+            (img_color.shape[1], img_color.shape[0]),
+            interpolation=cv2.INTER_NEAREST,
+        )
+
+
     # Convert floating point images to 8-bit
     if img_color.dtype != np.uint8:
         img_color = cv2.convertScaleAbs(img_color, alpha=255.0)
 
-    return cv2.addWeighted(img_color, 1 - alpha, color_mask, alpha, 0)
+        overlay = cv2.addWeighted(img_color, 1 - alpha, color_mask, alpha, 0)
 
+    # Draw legend for the classes present in the mask
+    unique_classes = np.unique(mask)
+    if num_classes is None:
+        num_classes = int(unique_classes.max()) + 1
+    if class_names is None:
+        class_names = [f"class {i}" for i in range(num_classes)]
+
+    patch = 20  # size of color squares
+    margin = 5
+    x = margin
+    y = margin
+    row_height = patch + 15
+    for cls in unique_classes:
+        cls = int(cls)
+        color = colorize_mask(np.array([[cls]]), num_classes)[0, 0].tolist()
+        cv2.rectangle(overlay, (x, y), (x + patch, y + patch), color, -1)
+        cv2.putText(
+            overlay,
+            class_names[cls],
+            (x + patch + 5, y + patch - 5),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            color,
+            1,
+            cv2.LINE_AA,
+        )
+        text_size, _ = cv2.getTextSize(
+            class_names[cls], cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
+        )
+        x += patch + 5 + text_size[0] + margin
+        if x + patch > overlay.shape[1]:
+            x = margin
+            y += row_height
+            if y + row_height > overlay.shape[0]:
+                break
+
+    return overlay
 
 def smooth_mask(mask, kernel_size=3):
     """Apply simple morphological post-processing to clean up a mask."""
