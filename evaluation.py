@@ -141,6 +141,40 @@ def colorize_mask(mask, num_classes=None):
     return colors[mask.astype(int)]
 
 
+def overlay_mask(image, mask, alpha=0.5, num_classes=None):
+    """Overlay a colorized mask on top of an image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Grayscale or color image in range [0, 1] or uint8.
+    mask : np.ndarray
+        Segmentation mask to overlay.
+    alpha : float, optional
+        Opacity of the mask, by default 0.5.
+    num_classes : int, optional
+        Number of classes for ``mask``.
+
+    Returns
+    -------
+    np.ndarray
+        BGR image showing ``image`` with the colorized ``mask`` overlaid.
+    """
+    color_mask = colorize_mask(mask, num_classes)
+
+    # Ensure the base image has three channels
+    if image.ndim == 2 or image.shape[-1] == 1:
+        img_color = np.repeat(image[..., np.newaxis], 3, axis=2)
+    else:
+        img_color = image
+
+    # Convert floating point images to 8-bit
+    if img_color.dtype != np.uint8:
+        img_color = cv2.convertScaleAbs(img_color, alpha=255.0)
+
+    return cv2.addWeighted(img_color, 1 - alpha, color_mask, alpha, 0)
+
+
 def smooth_mask(mask, kernel_size=3):
     """Apply simple morphological post-processing to clean up a mask."""
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
@@ -217,11 +251,13 @@ def evaluate(args, **options):
                     segmentation_iou.append(miou)
 
                 if args.outputImg:
-                    # visualize predicted (and optionally ground truth) masks
-                    imgs, titles = [colorize_mask(pred_mask)], ['pred']
+                    # visualize masks overlayed on the original image
+                    base_img = data['image']
+                    imgs = [overlay_mask(base_img, pred_mask)]
+                    titles = ['pred overlay']
                     if gt_key:
-                        imgs.append(colorize_mask(data[gt_key]))
-                        titles.append('gt')
+                        imgs.append(overlay_mask(base_img, data[gt_key]))
+                        titles.append('gt overlay')
 
                     plot_imgs(imgs, titles=titles, dpi=200)
                     plt.tight_layout()
