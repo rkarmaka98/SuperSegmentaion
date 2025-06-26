@@ -1,6 +1,6 @@
 data:
     # name: 'coco'
-    dataset: 'coco_panoptic'
+    dataset: 'CocoPanoptic'
 
     labels: logs/magicpoint_synth_homoAdapt_coco/predictions
     root: datasets/COCO
@@ -14,8 +14,9 @@ data:
 
     cache_in_memory: false
     # Adding COCO segmentation tasks
-    load_segmentation: true
+    load_segmentation: False
     load_panoptic: true  # set true to train with panoptic labels
+    num_segmentation_classes: 2
     preprocessing:
         resize: [240, 320]
         # resize: [480, 640]

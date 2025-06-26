@@ -22,5 +22,6 @@ torchinfo
 kornia
 coloredlogs
 tensorflow-addons
-
+# panopticapi
+git+https://github.com/cocodataset/panopticapi.git
 
