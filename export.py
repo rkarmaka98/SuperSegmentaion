@@ -35,7 +35,7 @@ from utils.utils import (
     load_checkpoint,
     save_path_formatter,
 )
-from utils.utils import getWriterPath
+from utils.utils import getWriterPath, flattenDetection
 from utils.loader import dataLoader, modelLoader, pretrainedLoader
 from utils.utils import inv_warp_image_batch
 from models.model_wrap import SuperPointFrontend_torch, PointTracker
@@ -151,12 +151,25 @@ def export_descriptor(config, output_dir, args):
         outs = get_pts_desc_from_agent(val_agent, img_0, device=device)
         pts, desc = outs["pts"], outs["desc"]  # pts: np [3, N]
 
+        # optional segmentation prediction
+        if args.export_segmentation and "segmentation" in val_agent.outs:
+            seg_pred = val_agent.outs["segmentation"].argmax(dim=1)
+            pred_mask = seg_pred.cpu().numpy().squeeze()
+        else:
+            pred_mask = None
+
         if outputMatches == True:
             tracker.update(pts, desc)
 
         # save keypoints
         pred = {"image": squeezeToNumpy(img_0)}
         pred.update({"prob": pts.transpose(), "desc": desc.transpose()})
+        if pred_mask is not None:
+            pred["pred_mask"] = pred_mask
+            if "segmentation_mask" in sample:
+                pred["gt_mask"] = squeezeToNumpy(sample["segmentation_mask"])
+            elif "mask" in sample:
+                pred["gt_mask"] = squeezeToNumpy(sample["mask"])
 
         # second image, output matches
         outs = get_pts_desc_from_agent(val_agent, img_1, device=device)
@@ -176,9 +189,11 @@ def export_descriptor(config, output_dir, args):
         )
 
         if "segmentation_mask" in sample:
-            pred.update({"segmentation_mask": squeezeToNumpy(sample["segmentation_mask"])})
+            mask_np = squeezeToNumpy(sample["segmentation_mask"])
+            pred.update({"segmentation_mask": mask_np, "gt_mask": mask_np})
         elif "mask" in sample:
-            pred.update({"segmentation_mask": squeezeToNumpy(sample["mask"])})
+            mask_np = squeezeToNumpy(sample["mask"])
+            pred.update({"segmentation_mask": mask_np, "gt_mask": mask_np})
 
 
         if outputMatches == True:
@@ -312,7 +327,15 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
                 continue
 
         # pass through network
-        heatmap = fe.run(img, onlyHeatmap=True, train=False)
+        with torch.no_grad():
+            outs_all = fe.net(img)
+        semi = outs_all["semi"]
+        heatmap = flattenDetection(semi, tensor=True)
+        if args.export_segmentation and "segmentation" in outs_all:
+            seg_pred = outs_all["segmentation"].argmax(dim=1)
+            pred_mask = seg_pred.cpu().numpy().squeeze()
+        else:
+            pred_mask = None
         outputs = combine_heatmap(heatmap, inv_homographies, mask_2D, device=device)
         pts = fe.getPtsFromHeatmap(outputs.detach().cpu().squeeze())  # (x,y, prob)
 
@@ -336,6 +359,12 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
         ## save keypoints
         pred = {}
         pred.update({"pts": pts})
+        if pred_mask is not None:
+            pred["pred_mask"] = pred_mask
+            if "segmentation_mask" in sample:
+                pred["gt_mask"] = np.squeeze(sample["segmentation_mask"])
+            elif "mask" in sample:
+                pred["gt_mask"] = np.squeeze(sample["mask"])
         if "segmentation_mask" in sample:
             pred.update({"segmentation_mask": np.squeeze(sample["segmentation_mask"])})
         elif "mask" in sample:
@@ -389,6 +418,12 @@ if __name__ == "__main__":
     p_train.add_argument(
         "--debug", action="store_true", default=False, help="turn on debuging mode"
     )
+    p_train.add_argument(
+        "--export-segmentation",
+        action="store_true",
+        default=False,
+        help="save predicted segmentation masks",
+    )
     p_train.set_defaults(func=export_descriptor)
 
     # using homography adaptation to export detection psuedo ground truth
@@ -401,6 +436,12 @@ if __name__ == "__main__":
     )
     p_train.add_argument(
         "--debug", action="store_true", default=False, help="turn on debuging mode"
+    )
+    p_train.add_argument(
+        "--export-segmentation",
+        action="store_true",
+        default=False,
+        help="save predicted segmentation masks",
     )
     # p_train.set_defaults(func=export_detector_homoAdapt)
     p_train.set_defaults(func=export_detector_homoAdapt_gpu)
