@@ -64,7 +64,7 @@ class Train_model_frontend(object):
         "save_interval": 2000,
         "tensorboard_interval": 200,
         "model": {"subpixel": {"enable": False},
-                  "lambda_segmentaion": 1.0, # weight of optional segmentation loss
+                  "lambda_segmentation": 1.0, # weight of optional segmentation loss
                   "num_segmentation_classes": 0 # number of classes for segmentation head
                   },
     }
