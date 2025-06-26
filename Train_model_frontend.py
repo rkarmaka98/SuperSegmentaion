@@ -193,6 +193,8 @@ class Train_model_frontend(object):
         """
         model = self.config["model"]["name"]
         params = self.config["model"]["params"]
+        if self.num_segmentation_classes > 0 and "num_classes" not in params:
+            params["num_classes"] = self.num_segmentation_classes
         print("model: ", model)
         net = modelLoader(model=model, **params).to(self.device)
         logging.info("=> setting adam solver")
