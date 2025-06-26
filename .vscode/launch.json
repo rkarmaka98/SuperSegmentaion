@@ -84,7 +84,8 @@
                 "--outputImg",
                 "--homography",
                 "--plotMatching",
-                "--evaluate-segmentation"
+                "--evaluate-segmentation",
+                "--outputImg"
             ],
             "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
             "console": "integratedTerminal",
