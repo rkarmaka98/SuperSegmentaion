@@ -53,6 +53,8 @@ class CocoPanoptic(Coco):
             H, W = input_dict['image'].shape[-2:]
             if pan_path.exists():
                 pan_img = cv2.imread(str(pan_path), cv2.IMREAD_COLOR)
+                # convert BGR image returned by OpenCV to RGB for rgb2id
+                pan_img = cv2.cvtColor(pan_img, cv2.COLOR_BGR2RGB)
                 seg_ids = rgb2id(pan_img)
                 cat_map = np.zeros_like(seg_ids, dtype=np.int32)
                 mapping = self.panoptic_segments.get(image_name, {})
