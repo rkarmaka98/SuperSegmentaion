@@ -34,6 +34,10 @@ class Val_model_heatmap(SuperPointFrontend_torch):
         self.config = config
         self.model = self.config['name']
         self.params = self.config['params']
+        # optional segmentation: ensure model has correct output channels
+        self.num_segmentation_classes = self.config.get('num_segmentation_classes', 0)
+        if self.num_segmentation_classes > 0 and 'num_classes' not in self.params:
+            self.params['num_classes'] = self.num_segmentation_classes
         self.weights_path = self.config['pretrained']
         self.device=device
 
