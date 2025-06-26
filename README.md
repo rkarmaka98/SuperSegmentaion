@@ -53,6 +53,8 @@ datasets/ ($DATA_DIR)
 |   `-- val2014
 |       |-- file1.jpg
 |       `-- ...
+|   |-- panoptic_train2017
+|   |-- panoptic_val2017
 `-- HPatches
 |   |-- i_ajuntament
 |   `-- ...
@@ -78,8 +80,9 @@ datasets/ ($DATA_DIR)
 |   |   |-- image_00/
 |   |   `-- ...
 ```
-- MS-COCO 2014 
+- MS-COCO 2014
     - [MS-COCO 2014 link](http://cocodataset.org/#download)
+    - For panoptic training download the panoptic annotations and place the corresponding folders `panoptic_train2017/` and `panoptic_val2017/` with their JSON files under `COCO/annotations`.
 - HPatches
     - [HPatches link](http://icvl.ee.ic.ac.uk/vbalnt/hpatches/hpatches-sequences-release.tar.gz)
 - KITTI Odometry
@@ -161,6 +164,7 @@ python train4.py <train task> <config file> <export folder> --eval
 ```
 python train4.py train_joint configs/superpoint_coco_train_heatmap.yaml superpoint_coco --eval --debug
 ```
+To train using COCO panoptic labels, set `dataset: 'coco_panoptic'` and `load_panoptic: true` in the configuration. The COCO folder must contain `panoptic_train2017/`, `panoptic_val2017/` and their corresponding JSON files under `annotations/`.
 #### kitti
 ```
 python train4.py train_joint configs/superpoint_kitti_train_heatmap.yaml superpoint_kitti --eval --debug
