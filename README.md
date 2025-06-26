@@ -162,6 +162,8 @@ Segmentation quality can be evaluated with:
 ```
 python evaluation.py <output_path> --evaluate-segmentation
 ```
+Passing `--outputImg` saves colored predictions and ground truth masks under
+`<output_path>/segmentation`.
 
 ### 5) Export/ Evaluate repeatability on SIFT
 - Refer to another project: [Feature-preserving image denoising with multiresolution filters](https://github.com/eric-yyjau/image_denoising_matching)
