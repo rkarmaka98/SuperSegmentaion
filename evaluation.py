@@ -116,12 +116,37 @@ def compute_miou(pred_mask, gt_mask, num_classes=None):
 
 
 def colorize_mask(mask, num_classes=None):
-    """Convert a segmentation mask to a color image for visualization."""
+    """Convert a segmentation mask to a color image for visualization.
+
+    * Generates unique colors for any number of classes.
+    * Returns BGR output so it can be passed directly to ``plot_imgs`` which
+      expects OpenCV style images.
+    """
     if num_classes is None:
         num_classes = int(mask.max()) + 1 if mask.size > 0 else 1
-    cmap = plt.get_cmap("tab20")
-    colors = (cmap(np.arange(num_classes) % cmap.N)[:, :3] * 255).astype(np.uint8)
+
+    if num_classes <= 20:
+        cmap = plt.get_cmap("tab20")
+        colors = cmap(np.arange(num_classes))[:, :3]
+    else:
+        # Generate colors in HSV space to avoid repetition
+        hsv = np.stack([
+            np.linspace(0, 1, num_classes, endpoint=False),
+            np.ones(num_classes),
+            np.ones(num_classes)
+        ], axis=1)
+        colors = matplotlib.colors.hsv_to_rgb(hsv)
+
+    colors = (colors * 255).astype(np.uint8)[:, [2, 1, 0]]  # to BGR
     return colors[mask.astype(int)]
+
+
+def smooth_mask(mask, kernel_size=3):
+    """Apply simple morphological post-processing to clean up a mask."""
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    mask = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_OPEN, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    return mask
 
 
 def evaluate(args, **options):
@@ -185,14 +210,15 @@ def evaluate(args, **options):
             if pred_key is None:
                 logging.warning(f"No predicted mask found in {f}")
             else:
+                pred_mask = smooth_mask(data[pred_key])
                 # compute segmentation metrics when gt mask is available
                 if gt_key:
-                    miou = compute_miou(data[pred_key], data[gt_key])
+                    miou = compute_miou(pred_mask, data[gt_key])
                     segmentation_iou.append(miou)
 
                 if args.outputImg:
                     # visualize predicted (and optionally ground truth) masks
-                    imgs, titles = [colorize_mask(data[pred_key])], ['pred']
+                    imgs, titles = [colorize_mask(pred_mask)], ['pred']
                     if gt_key:
                         imgs.append(colorize_mask(data[gt_key]))
                         titles.append('gt')
