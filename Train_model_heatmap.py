@@ -333,6 +333,12 @@ class Train_model_heatmap(Train_model_frontend):
                     seg_pred = F.interpolate(
                         seg_pred, size=seg_target.shape[-2:], mode="bilinear", align_corners=False
                     )
+
+                n_classes = seg_pred.shape[1]
+                # validate labels; see `num_segmentation_classes` config
+                assert seg_target.max() < n_classes and seg_target.min() >= 0, (
+                    f"Segmentation labels must be in [0, {n_classes-1}]"
+                )
                 seg_loss = F.cross_entropy(
                     seg_pred, seg_target
                 )
