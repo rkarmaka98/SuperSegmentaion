@@ -176,18 +176,31 @@ def evaluate(args, **options):
         print("load successfully. ", f)
 
         if args.evaluate_segmentation:
-            pred_key = next((k for k in ['pred_mask', 'segmentation_mask', 'mask_pred'] if k in data.files), None)
-            gt_key = next((k for k in ['gt_mask', 'segmentation_gt', 'mask_gt'] if k in data.files), None)
-            if pred_key and gt_key:
-                miou = compute_miou(data[pred_key], data[gt_key])
-                segmentation_iou.append(miou)
+            # Look for typical predicted and ground-truth mask keys
+            pred_key = next((k for k in ['pred_mask', 'segmentation_mask', 'mask_pred']
+                             if k in data.files), None)
+            gt_key = next((k for k in ['gt_mask', 'segmentation_gt', 'mask_gt']
+                           if k in data.files), None)
+
+            if pred_key is None:
+                logging.warning(f"No predicted mask found in {f}")
+            else:
+                # compute segmentation metrics when gt mask is available
+                if gt_key:
+                    miou = compute_miou(data[pred_key], data[gt_key])
+                    segmentation_iou.append(miou)
+
                 if args.outputImg:
-                    # visualize predicted and ground-truth masks
-                    pred_img = colorize_mask(data[pred_key])
-                    gt_img = colorize_mask(data[gt_key])
-                    plot_imgs([pred_img, gt_img], titles=["pred", "gt"], dpi=200)
+                    # visualize predicted (and optionally ground truth) masks
+                    imgs, titles = [colorize_mask(data[pred_key])], ['pred']
+                    if gt_key:
+                        imgs.append(colorize_mask(data[gt_key]))
+                        titles.append('gt')
+
+                    plot_imgs(imgs, titles=titles, dpi=200)
                     plt.tight_layout()
-                    plt.savefig(os.path.join(path_seg, f_num + '.png'), dpi=300, bbox_inches='tight')
+                    plt.savefig(os.path.join(path_seg, f_num + '.png'), dpi=300,
+                                bbox_inches='tight')
                     plt.close('all')
 
         # unwarp
