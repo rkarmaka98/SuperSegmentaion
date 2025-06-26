@@ -334,7 +334,7 @@ class Train_model_heatmap(Train_model_frontend):
                         seg_pred, size=seg_target.shape[-2:], mode="bilinear", align_corners=False
                     )
                 seg_loss = F.cross_entropy(
-                    outs["segmentation"], sample["segmentation_mask"].long().to(self.device)
+                    seg_pred, seg_target
                 )
                 loss += self.lambda_segmentation * seg_loss
 
