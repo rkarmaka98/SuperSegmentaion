@@ -11,3 +11,4 @@ runs/
 logs/
 notebooks/
 pretrained/
+datasets/Cityscapes/

@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 import cv2
@@ -36,11 +37,13 @@ class CocoPanoptic(Coco):
                 with open(ann_file, 'r') as f:
                     data = json.load(f)
                 self.panoptic_root = ann_file.parent / f'panoptic_{task}2017'
+                if not self.panoptic_root.exists():
+                    logging.warning('Panoptic folder missing: %s', self.panoptic_root)
                 for ann in data['annotations']:
                     seg_map = {seg['id']: seg['category_id'] for seg in ann['segments_info']}
                     self.panoptic_segments[ann['file_name']] = seg_map
             else:
-                print(f'Panoptic annotation file not found: {ann_file}')
+                logging.warning('Panoptic annotation file not found: %s', ann_file)
 
     def __getitem__(self, index):
         # get sample from base class
@@ -63,9 +66,17 @@ class CocoPanoptic(Coco):
                 cat_map = cv2.resize(cat_map, (W, H), interpolation=cv2.INTER_NEAREST)
                 num_cls = self.config.get('num_segmentation_classes', 0)
                 if num_cls > 0:
+                    max_val = int(cat_map.max())
+                    if max_val >= num_cls:
+                        logging.warning(
+                            "Segmentation label %d exceeds num_segmentation_classes=%d; clipping",
+                            max_val,
+                            num_cls,
+                        )
                     cat_map = np.clip(cat_map, 0, num_cls - 1)
                 input_dict['segmentation_mask'] = torch.tensor(cat_map, dtype=torch.long)
             else:
+                logging.warning('Missing panoptic file for image %s', image_name)
                 input_dict['segmentation_mask'] = torch.zeros((H, W), dtype=torch.long)
 
         return input_dict
