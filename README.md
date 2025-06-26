@@ -47,48 +47,26 @@ Datasets should be downloaded into $DATA_DIR. The Synthetic Shapes dataset will 
 ```
 datasets/ ($DATA_DIR)
 |-- COCO
-|   |-- train2014
+|   |-- train2017
 |   |   |-- file1.jpg
 |   |   `-- ...
-|   `-- val2014
+|   `-- val2017
 |       |-- file1.jpg
 |       `-- ...
 |   |-- panoptic_train2017
 |   |-- panoptic_val2017
+|   |-- panoptic_val2017.json
+|   |-- panoptic_train2017.json
 `-- HPatches
 |   |-- i_ajuntament
 |   `-- ...
 `-- synthetic_shapes  # will be automatically created
-`-- KITTI (accumulated folders from raw data)
-|   |-- 2011_09_26_drive_0020_sync
-|   |   |-- image_00/
-|   |   `-- ...
-|   |-- ...
-|   `-- 2011_09_28_drive_0001_sync
-|   |   |-- image_00/
-|   |   `-- ...
-|   |-- ...
-|   `-- 2011_09_29_drive_0004_sync
-|   |   |-- image_00/
-|   |   `-- ...
-|   |-- ...
-|   `-- 2011_09_30_drive_0016_sync
-|   |   |-- image_00/
-|   |   `-- ...
-|   |-- ...
-|   `-- 2011_10_03_drive_0027_sync
-|   |   |-- image_00/
-|   |   `-- ...
 ```
-- MS-COCO 2014
-    - [MS-COCO 2014 link](http://cocodataset.org/#download)
+- MS-COCO 2017
+    - [MS-COCO 2017 link](http://cocodataset.org/#download)
     - For panoptic training download the panoptic annotations and place the corresponding folders `panoptic_train2017/` and `panoptic_val2017/` with their JSON files under `COCO/annotations`.
 - HPatches
     - [HPatches link](http://icvl.ee.ic.ac.uk/vbalnt/hpatches/hpatches-sequences-release.tar.gz)
-- KITTI Odometry
-    - [KITTI website](http://www.cvlibs.net/datasets/kitti/raw_data.php)
-    - [download link](http://www.cvlibs.net/download.php?file=raw_data_downloader.zip)
-
 
 
 ## run the code
@@ -130,20 +108,6 @@ python export.py export_detector_homoAdapt configs/magicpoint_coco_export.yaml m
 ```
 python export.py export_detector_homoAdapt configs/magicpoint_coco_export.yaml magicpoint_synth_homoAdapt_coco
 ```
-#### export kitti
-- config
-  - check the 'root' in config file 
-  - train/ val split_files are included in `datasets/kitti_split/`.
-```
-python export.py export_detector_homoAdapt configs/magicpoint_kitti_export.yaml magicpoint_base_homoAdapt_kitti
-```
-<!-- #### export tum
-- config
-  - check the 'root' in config file
-  - set 'datasets/tum_split/train.txt' as the sequences you have
-```
-python export.py export_detector_homoAdapt configs/magicpoint_tum_export.yaml magicpoint_base_homoAdapt_tum
-``` -->
 
 
 ### 3) Training Superpoint on MS-COCO/ KITTI
