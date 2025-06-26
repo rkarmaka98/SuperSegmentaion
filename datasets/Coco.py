@@ -103,7 +103,7 @@ class Coco(data.Dataset):
         self.samples = sequence_set
 
         # load segmentation annotations if set in config
-        self.cooc = None
+        self.coco = None
         self.filename_to_id = {}
         if self.config.get('load_segmentation', False):
             annotation_file = Path(DATA_PATH, 'COCO/annotations',f'instances_{task}2017.json')
