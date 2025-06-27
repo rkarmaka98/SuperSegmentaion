@@ -10,7 +10,11 @@ from utils.tools import dict_update
 
 
 class Cityscapes(data.Dataset):
-    """Dataset loader for Cityscapes images and semantic labels."""
+    """Dataset loader for Cityscapes images and semantic labels.
+
+    ``segmentation_mask`` is returned as a ``torch.long`` tensor with shape
+    ``(H, W)`` when ``load_segmentation`` is enabled.
+    """
 
     # default configuration similar to Coco dataset
     default_config = {
@@ -82,6 +86,7 @@ class Cityscapes(data.Dataset):
             else:
                 logging.warning('Missing segmentation label file: %s', mask_path)
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
+            # semantic segmentation mask with dtype long and shape (H, W)
             output['segmentation_mask'] = seg_mask
 
         return output
