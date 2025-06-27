@@ -327,9 +327,6 @@ class Coco(data.Dataset):
                         seg_path,
                     )
                 segmentation_mask = seg_mask
-            else:
-                # keep default zero mask when file missing
-                logging.warning('Missing segmentation label file: %s', seg_path)
 
         if segmentation_mask is not None:
             input['segmentation_mask'] = segmentation_mask
@@ -466,7 +463,7 @@ class Coco(data.Dataset):
         name = sample['name']
         to_numpy = False
         if to_numpy:
-            image = np.array(img)
+            image = np.array(image)
 
         input.update({'name': name, 'scene_name': "./"}) # dummy scene name
         return input
