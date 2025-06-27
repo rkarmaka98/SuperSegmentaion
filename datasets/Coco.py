@@ -271,6 +271,10 @@ class Coco(data.Dataset):
         img_o = _read_image(sample['image'])
         H, W = img_o.shape[0], img_o.shape[1]
         # print(f"image: {image.shape}")
+        segmentation_mask = None
+        if self.config.get('load_segmentation', False) or self.config.get('num_segmentation_classes', 0) > 0:
+            # default mask avoids KeyError when annotations are absent
+            segmentation_mask = torch.zeros((H, W), dtype=torch.long)
         img_aug = img_o.copy()
         if (self.enable_photo_train == True and self.action == 'train') or (self.enable_photo_val and self.action == 'val'):
             img_aug = imgPhotometric(img_o) # numpy array (H, W, 1)
@@ -283,7 +287,7 @@ class Coco(data.Dataset):
         input.update({'image': img_aug})
         input.update({'valid_mask': valid_mask})
 
-        if self.coco is not None:
+        if self.coco is not None and segmentation_mask is not None:
             file_name = Path(sample['image']).name
             img_id = self.filename_to_id.get(file_name)
             mask = np.zeros((H, W), dtype=np.uint8)
@@ -292,22 +296,22 @@ class Coco(data.Dataset):
                 anns = self.coco.loadAnns(ann_ids)
                 for ann in anns:
                     anno_mask = self.coco.annToMask(ann)
-                    anno_mask = cv2.resize(anno_mask, (W,H), interpolation=cv2.INTER_NEAREST)
+                    anno_mask = cv2.resize(anno_mask, (W, H), interpolation=cv2.INTER_NEAREST)
                     mask = np.maximum(mask, anno_mask)
-            input['segmentation_mask'] = torch.tensor(mask, dtype=torch.uint8).view(1, H, W)
+            segmentation_mask = torch.tensor(mask, dtype=torch.long)
 
-        if self.config.get('num_segmentation_classes', 0) > 0:
+        if self.config.get('num_segmentation_classes', 0) > 0 and segmentation_mask is not None:
             seg_path = None
             if self.config.get('segmentation_labels'):
                 seg_path = Path(self.config['segmentation_labels'], self.action, f"{name}.png")
             if seg_path and seg_path.exists():
                 seg_mask = cv2.imread(str(seg_path), cv2.IMREAD_GRAYSCALE)
-                seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST) 
+                seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST)
                 seg_mask = torch.tensor(seg_mask, dtype=torch.long)
                 # error handling when segmenetation label exceeds number of classes
                 max_val = int(seg_mask.max())
                 num_cls = int(self.config.get('num_segmentation_classes', 0))
-         
+
                 if max_val >= num_cls > 0:
                     logging.warning(
                         "Segmentation label %d exceeds num_segmentation_classes=%d in %s",
@@ -315,12 +319,13 @@ class Coco(data.Dataset):
                         num_cls,
                         seg_path,
                     )
-                    pass
-                input.update({'segmentation_mask': seg_mask})
+                segmentation_mask = seg_mask
             else:
-                # skip segmentation mask when corresponding label file is missing
+                # keep default zero mask when file missing
                 logging.warning('Missing segmentation label file: %s', seg_path)
-                pass
+
+        if segmentation_mask is not None:
+            input['segmentation_mask'] = segmentation_mask
 
         if self.config['homography_adaptation']['enable']:
             # img_aug = torch.tensor(img_aug)
