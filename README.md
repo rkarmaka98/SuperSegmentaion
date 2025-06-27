@@ -105,6 +105,9 @@ Predicted segmentation masks can also be exported by adding
 `--export-segmentation` to other export commands and evaluated using
 `evaluation.py --evaluate-segmentation`.
 
+The segmentation head uses a lightweight ASPP decoder which provides
+better context while keeping the model small enough for mid-range GPUs.
+
 
 ## run the code
 - Notes:
