@@ -108,18 +108,21 @@ datasets/ ($DATA_DIR)
 ```
 - If the dataset is stored elsewhere, update `DATA_PATH` in `settings.py`.
 
-Example commands using `superpoint_cityscapes_train.yaml`:
+Example commands using the Cityscapes configs:
 
 ```bash
 # training
-python train4.py train_joint configs/superpoint_cityscapes_train.yaml superpoint_cityscapes --eval
+python train4.py train_joint configs/superpoint_cityscapes_finetune.yaml superpoint_cityscapes --eval
 
 # export predictions (including segmentation masks)
-python export.py export_descriptor configs/superpoint_cityscapes_train.yaml superpoint_cityscapes_val --export-segmentation
+python export.py export_descriptor configs/superpoint_cityscapes_export.yaml cityscapes_export --export-segmentation
 
 # evaluate exported segmentation
-python evaluation.py logs/superpoint_cityscapes_val/predictions --evaluate-segmentation
+python evaluation.py logs/cityscapes_export/predictions --evaluate-segmentation
 ```
+
+Both configs load a checkpoint via their `pretrained` option. Update this path
+to point at the model you wish to fine-tune or evaluate.
 
 Predicted segmentation masks can also be exported by adding
 `--export-segmentation` to other export commands and evaluated using
