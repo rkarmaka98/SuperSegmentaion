@@ -7,7 +7,7 @@ data:
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
     cache_in_memory: false
     load_segmentation: true
-    num_segmentation_classes: 19
+    num_segmentation_classes: 34
     preprocessing:
         resize: [512, 1024]  # images are downsampled for training
     augmentation:
@@ -60,7 +60,7 @@ model:
     detection_threshold: 0.015
     lambda_loss: 1
     lambda_segmentation: 1.0
-    num_segmentation_classes: 19
+    num_segmentation_classes: 34
     nms: 4
     dense_loss:
         enable: false
