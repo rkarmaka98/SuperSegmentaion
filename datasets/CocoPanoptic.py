@@ -107,10 +107,10 @@ class CocoPanoptic(Coco):
                     logging.warning('Missing panoptic file for image %s', image_name)
 
             elif self.cs34_root is not None:
-                pan_path = self.cs34_root / image_name
+                cs34_path = self.cs34_root / image_name
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
-                if pan_path.exists():
-                    seg_img = cv2.imread(str(pan_path), cv2.IMREAD_GRAYSCALE)
+                if cs34_path.exists():
+                    seg_img = cv2.imread(str(cs34_path), cv2.IMREAD_GRAYSCALE)
                     seg_img = cv2.resize(seg_img, (W, H), interpolation=cv2.INTER_NEAREST)
                     seg_mask = torch.tensor(seg_img, dtype=torch.long)
                     num_cls = self.config.get('num_segmentation_classes', 0)
@@ -118,13 +118,13 @@ class CocoPanoptic(Coco):
                         max_val = int(seg_mask.max())
                         if max_val >= num_cls:
                             logging.warning(
-                                "Segmentation label %d exceeds num_segmentation_classes=%d; clipping",
+                                "Segmentation label %d exceeds num_segmentation_classes=%d; clipping for cs34",
                                 max_val,
                                 num_cls,
                             )
                             seg_mask = torch.clamp(seg_mask, 0, num_cls - 1)
                 else:
-                    logging.warning('Missing panoptic file for image %s', image_name)
+                    logging.warning('Missing cs34 file for image %s', image_name)
                 
             else:
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
