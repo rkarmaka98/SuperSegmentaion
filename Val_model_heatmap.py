@@ -75,12 +75,15 @@ class Val_model_heatmap(SuperPointFrontend_torch):
         except RuntimeError as err:
             # add more context when segmentation classes mismatch
             ckpt_classes = (
-                checkpoint["model_state_dict"].get("seg_conv2.weight")
+                checkpoint["model_state_dict"].get("seg_head.3.weight")
                 .shape[0]
-                if "seg_conv2.weight" in checkpoint["model_state_dict"]
+                if "seg_head.3.weight" in checkpoint["model_state_dict"]
                 else "unknown"
             )
-            model_classes = getattr(self.net.seg_conv2, "out_channels", "unknown")
+            model_classes = (
+                self.net.seg_head[-1].out_channels
+                if hasattr(self.net, "seg_head") else "unknown"
+            )
             raise RuntimeError(
                 f"Could not load model weights: {err}\n"
                 f"Checkpoint segmentation classes: {ckpt_classes}, "
