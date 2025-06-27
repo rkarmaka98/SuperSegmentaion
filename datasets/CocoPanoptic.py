@@ -58,6 +58,7 @@ class CocoPanoptic(Coco):
             image_name = Path(sample['image']).with_suffix('.png').name
             pan_path = self.panoptic_root / image_name
             H, W = input_dict['image'].shape[-2:]
+            seg_mask = torch.zeros((H, W), dtype=torch.long)  # fallback mask prevents KeyError
             if pan_path.exists():
                 pan_img = cv2.imread(str(pan_path), cv2.IMREAD_COLOR)
                 # convert BGR image returned by OpenCV to RGB for rgb2id
@@ -78,11 +79,14 @@ class CocoPanoptic(Coco):
                             num_cls,
                         )
                     cat_map = np.clip(cat_map, 0, num_cls - 1)
-                # panoptic segmentation mask returned as (H, W) long tensor
-                input_dict['segmentation_mask'] = torch.tensor(cat_map, dtype=torch.long)
+
+                seg_mask = torch.tensor(cat_map, dtype=torch.long)
+                
             else:
                 # skip mask if panoptic file missing
                 logging.warning('Missing panoptic file for image %s', image_name)
-                pass
+                # seg_mask stays all zeros so later code can access segmentation_mask safely
+
+            input_dict['segmentation_mask'] = seg_mask
 
         return input_dict
