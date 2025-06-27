@@ -16,7 +16,7 @@ data:
     # Adding COCO segmentation tasks
     load_segmentation: false
     load_panoptic: true  # set true to train with panoptic labels
-    num_segmentation_classes: 171 
+    num_segmentation_classes: 201 
     preprocessing:
         resize: [240, 320]
         # resize: [480, 640]
@@ -74,7 +74,7 @@ model:
     detection_threshold: 0.015 # 0.015
     lambda_loss: 1 # 1
     lambda_segmentation: 1.0
-    num_segmentation_classes: 171    
+    num_segmentation_classes: 201    
     nms: 4
     dense_loss:
         enable: false
@@ -99,12 +99,12 @@ model:
 
 retrain: True # set true for new model
 reset_iter: True # set true to set the iteration number to 0
-train_iter: 120 # 170000
-validation_interval: 200 # 2000
+train_iter: 17000 # 170000
+validation_interval: 2000 # 2000
 tensorboard_interval: 200 # 200
-save_interval: 100 # 2000
+save_interval: 2000 # 2000
 validation_size: 5
-truncate: 100
+truncate: 0
 
 pretrained: 
 

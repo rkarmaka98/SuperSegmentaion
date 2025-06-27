@@ -15,7 +15,7 @@ model:
     }
 
     lambda_segmentation: 1.0
-    num_segmentation_classes: 171
+    num_segmentation_classes: 201
 
     # learning_rate: 0.0001 # 0.0001
     detection_threshold: 0.015 # 0.015
@@ -39,7 +39,7 @@ model:
     # pretrained: 'logs/superpoint_kitti_heat2_0/checkpoints/superPointNet_50000_checkpoint.pth.tar'
     # pretrained: 'logs/superpoint_spollo_v0/checkpoints/superPointNet_40000_checkpoint.pth.tar'
     # pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_180_checkpoint.pth.tar'
-    pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_200_checkpoint.pth.tar'
+    pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_18000_checkpoint.pth.tar'
 
 
 

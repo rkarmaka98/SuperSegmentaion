@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from pathlib import Path
 import torch.utils.data as data
+import logging
 
 # from .base_dataset import BaseDataset
 from settings import DATA_PATH, EXPER_PATH
@@ -19,7 +20,7 @@ class Coco(data.Dataset):
         'num_segmentation_classes': 0,
         'cache_in_memory': False,
         'validation_size': 100,
-        'truncate': 100,
+        'truncate': 0,
         # COCO instance segmentation masks
         'load_segmentation': True,
         'preprocessing': {
@@ -301,13 +302,25 @@ class Coco(data.Dataset):
                 seg_path = Path(self.config['segmentation_labels'], self.action, f"{name}.png")
             if seg_path and seg_path.exists():
                 seg_mask = cv2.imread(str(seg_path), cv2.IMREAD_GRAYSCALE)
-                seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST)
-                # add segmentation mask only when label file exists
-                input['segmentation_mask'] = torch.tensor(seg_mask, dtype=torch.long)
+                seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST) 
+                seg_mask = torch.tensor(seg_mask, dtype=torch.long)
+                # error handling when segmenetation label exceeds number of classes
+                max_val = int(seg_mask.max())
+                num_cls = int(self.config.get('num_segmentation_classes', 0))
+         
+                if max_val >= num_cls > 0:
+                    logging.warning(
+                        "Segmentation label %d exceeds num_segmentation_classes=%d in %s",
+                        max_val,
+                        num_cls,
+                        seg_path,
+                    )
+                    pass
+                input.update({'segmentation_mask': seg_mask})
             else:
                 # skip segmentation mask when corresponding label file is missing
+                logging.warning('Missing segmentation label file: %s', seg_path)
                 pass
-
 
         if self.config['homography_adaptation']['enable']:
             # img_aug = torch.tensor(img_aug)
