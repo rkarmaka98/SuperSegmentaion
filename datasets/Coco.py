@@ -302,10 +302,12 @@ class Coco(data.Dataset):
                 seg_path = Path(self.config['segmentation_labels'], self.action, f"{name}.png")
             if seg_path and seg_path.exists():
                 seg_mask = cv2.imread(str(seg_path), cv2.IMREAD_GRAYSCALE)
-                seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST)
+                seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST) 
                 seg_mask = torch.tensor(seg_mask, dtype=torch.long)
+                # error handling when segmenetation label exceeds number of classes
                 max_val = int(seg_mask.max())
                 num_cls = int(self.config.get('num_segmentation_classes', 0))
+         
                 if max_val >= num_cls > 0:
                     logging.warning(
                         "Segmentation label %d exceeds num_segmentation_classes=%d in %s",
@@ -313,11 +315,12 @@ class Coco(data.Dataset):
                         num_cls,
                         seg_path,
                     )
+                    pass
+                input.update({'segmentation_mask': seg_mask})
             else:
+                # skip segmentation mask when corresponding label file is missing
                 logging.warning('Missing segmentation label file: %s', seg_path)
-                seg_mask = torch.zeros((H, W), dtype=torch.long)
-            input.update({'segmentation_mask': seg_mask})
-
+                pass
 
         if self.config['homography_adaptation']['enable']:
             # img_aug = torch.tensor(img_aug)
