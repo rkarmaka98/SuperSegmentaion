@@ -302,10 +302,11 @@ class Coco(data.Dataset):
             if seg_path and seg_path.exists():
                 seg_mask = cv2.imread(str(seg_path), cv2.IMREAD_GRAYSCALE)
                 seg_mask = cv2.resize(seg_mask, (W, H), interpolation=cv2.INTER_NEAREST)
-                seg_mask = torch.tensor(seg_mask, dtype=torch.long)
+                # add segmentation mask only when label file exists
+                input['segmentation_mask'] = torch.tensor(seg_mask, dtype=torch.long)
             else:
-                seg_mask = torch.zeros((H, W), dtype=torch.long)
-            input.update({'segmentation_mask': seg_mask})
+                # skip segmentation mask when corresponding label file is missing
+                pass
 
 
         if self.config['homography_adaptation']['enable']:
