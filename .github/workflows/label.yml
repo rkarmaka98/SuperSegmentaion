@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Remove the label
-        uses: actions-ecosystem/action-remove-labels@v2
+        uses: actions-ecosystem/action-remove-labels@v
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           labels: ${{ github.event.label.name }}
