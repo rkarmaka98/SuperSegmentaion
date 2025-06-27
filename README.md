@@ -69,6 +69,42 @@ datasets/ ($DATA_DIR)
 - HPatches
     - [HPatches link](http://icvl.ee.ic.ac.uk/vbalnt/hpatches/hpatches-sequences-release.tar.gz)
 
+### Cityscapes
+- [Cityscapes link](https://www.cityscapes-dataset.com/downloads/)
+- After extracting, place the dataset under `$DATA_DIR/Cityscapes` so that the
+  directory structure is:
+
+```
+datasets/ ($DATA_DIR)
+`-- Cityscapes
+    |-- leftImg8bit
+    |   |-- train
+    |   |-- val
+    |   `-- test
+    `-- gtFine
+        |-- train
+        |-- val
+        `-- test
+```
+- If the dataset is stored elsewhere, update `DATA_PATH` in `settings.py`.
+
+Example commands using `superpoint_cityscapes_train.yaml`:
+
+```bash
+# training
+python train4.py train_joint configs/superpoint_cityscapes_train.yaml superpoint_cityscapes --eval
+
+# export predictions (including segmentation masks)
+python export.py export_descriptor configs/superpoint_cityscapes_train.yaml superpoint_cityscapes_val --export-segmentation
+
+# evaluate exported segmentation
+python evaluation.py logs/superpoint_cityscapes_val/predictions --evaluate-segmentation
+```
+
+Predicted segmentation masks can also be exported by adding
+`--export-segmentation` to other export commands and evaluated using
+`evaluation.py --evaluate-segmentation`.
+
 
 ## run the code
 - Notes:
