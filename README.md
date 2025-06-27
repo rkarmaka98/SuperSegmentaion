@@ -124,6 +124,10 @@ python evaluation.py logs/cityscapes_export/predictions --evaluate-segmentation
 Both configs load a checkpoint via their `pretrained` option. Update this path
 to point at the model you wish to fine-tune or evaluate.
 
+When `warped_pair.enable` is set to true in `superpoint_cityscapes_export.yaml`,
+the Cityscapes loader also returns `warped_image` and its corresponding
+`homography` so descriptor metrics can be exported like on COCO or HPatches.
+
 Predicted segmentation masks can also be exported by adding
 `--export-segmentation` to other export commands and evaluated using
 `evaluation.py --evaluate-segmentation`.

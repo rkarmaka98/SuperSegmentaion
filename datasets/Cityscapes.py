@@ -5,6 +5,10 @@ import numpy as np
 import torch
 import torch.utils.data as data
 
+# for generating warped pairs
+from utils.homographies import sample_homography_np
+from utils.utils import inv_warp_image
+
 from settings import DATA_PATH
 from utils.tools import dict_update
 
@@ -29,6 +33,11 @@ class Cityscapes(data.Dataset):
             'resize': [256, 512]
         },
         'num_parallel_calls': 10,
+        # optional random homography generation for descriptor export
+        'warped_pair': {
+            'enable': False,
+            'params': {},
+        },
     }
 
     def __init__(self, transform=None, task='train', **config):
@@ -88,5 +97,19 @@ class Cityscapes(data.Dataset):
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
             # semantic segmentation mask with dtype long and shape (H, W)
             output['segmentation_mask'] = seg_mask
+
+        # optionally generate a warped pair and the corresponding homography
+        if self.config.get('warped_pair', {}).get('enable', False):
+            H, W = image_tensor.shape[-2:]
+            # sample homography mapping warped image to original
+            homo_inv = sample_homography_np(
+                np.array([H, W]), shift=-1, **self.config['warped_pair'].get('params', {})
+            )
+            # invert to obtain transformation from original to warped
+            homography = np.linalg.inv(homo_inv)
+            # warp original image using the inverse matrix
+            warped = inv_warp_image(image_tensor.squeeze(0), torch.tensor(homo_inv, dtype=torch.float32))
+            output['warped_image'] = warped.unsqueeze(0)
+            output['homography'] = torch.tensor(homography, dtype=torch.float32)
 
         return output
