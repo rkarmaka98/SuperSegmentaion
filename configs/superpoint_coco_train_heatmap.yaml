@@ -15,6 +15,7 @@ data:
     cache_in_memory: false
     # Adding COCO segmentation tasks
     load_segmentation: false
+    # Enable panoptic loading when training with CS-34 masks
     load_panoptic: true  # set true to train with panoptic labels
     # use grayscale masks from panoptic_cs34_* folders
     use_cs34_masks: true

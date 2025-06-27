@@ -75,7 +75,17 @@ datasets/ ($DATA_DIR)
           --categories annotations/panoptic_coco_categories.json \
           --dst panoptic_cs34_val2017
       ```
-    - Set `use_cs34_masks: true` in your configuration to load these grayscale masks instead of the standard panoptic labels. When enabled, the JSON annotations are not required.
+    - Set `load_panoptic: true` and `use_cs34_masks: true` in your configuration to train with these grayscale masks instead of the standard panoptic labels. When both options are enabled, the JSON annotations are not required.
+    - For evaluation, generate a category file matching the Cityscapes‑34 IDs:
+
+      ```bash
+      python utils/create_cs34_categories_json.py \
+          --dst annotations/panoptic_cs34_categories.json
+      ```
+
+      Pass `--category-file annotations/panoptic_cs34_categories.json` to
+      `evaluation.py` so class names and colors are correct when visualizing
+      predictions.
 - HPatches
     - [HPatches link](http://icvl.ee.ic.ac.uk/vbalnt/hpatches/hpatches-sequences-release.tar.gz)
 
