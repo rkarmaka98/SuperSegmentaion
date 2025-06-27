@@ -135,6 +135,17 @@ def colorize_mask(mask, num_classes=None, class_colors=None):
     if class_colors is not None:
         colors = np.asarray(class_colors)
         assert colors.shape[1] == 3
+    elif num_classes == 4:
+        # sensible default palette for the 4 Cityscapes categories
+        colors = np.array(
+            [
+                [0, 0, 255],     # static structure (blue)
+                [0, 255, 0],     # flat surfaces   (green)
+                [255, 0, 0],     # dynamic objects (red)
+                [255, 255, 255], # unstable/ambiguous (white)
+            ],
+            dtype=float,
+        ) / 255.0
     elif num_classes <= 20:
         # use matplotlib's tab20 for small numbers of classes
         cmap = plt.get_cmap("tab20")
@@ -351,7 +362,22 @@ def evaluate(args, **options):
         # homography = data['homography']
         real_H = data['homography']
         image = data['image']
-        warped_image = data['warped_image']
+        # gracefully handle missing or empty warped images
+        if 'warped_image' in data.files:
+            warped_image = data['warped_image']
+        else:
+            warped_image = None
+
+        if warped_image is None or not np.any(warped_image):
+            try:
+                warped_image = cv2.warpPerspective(
+                    image,
+                    real_H,
+                    (image.shape[1], image.shape[0]),
+                )
+            except Exception as e:
+                logging.warning(f"Failed to compute warped image for {f}: {e}")
+                warped_image = np.zeros_like(image)
         keypoints = data['prob'][:, [1, 0]]
         print("keypoints: ", keypoints[:3,:])
         warped_keypoints = data['warped_prob'][:, [1, 0]]
@@ -550,7 +576,8 @@ def evaluate(args, **options):
                 plt.savefig(path_warp + '/' + f_num + '.png')
 
                 ## plot filtered image
-                img1, img2 = data['image'], data['warped_image']
+                # reuse possibly reconstructed warped_image
+                img1, img2 = image, warped_image
                 warped_img1 = cv2.warpPerspective(img1, H, (img2.shape[1], img2.shape[0]))
                 plot_imgs([img1, img2, warped_img1], titles=['img1', 'img2', 'warped_img1'], dpi=200)
                 plt.tight_layout()
@@ -589,7 +616,6 @@ def evaluate(args, **options):
                     ran_idx = np.random.choice(matches.shape[0], int(matches.shape[0]*ratio))               
                     return matches[ran_idx], ran_idx
                 image = data['image']
-                warped_image = data['warped_image']
                 ## outliers
                 matches_temp, _ = get_random_m(matches_out, ratio)
                 # print(f"matches_in: {matches_in.shape}, matches_temp: {matches_temp.shape}")
