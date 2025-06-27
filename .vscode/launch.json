@@ -87,7 +87,7 @@
                 "--evaluate-segmentation",
                 "--outputImg",
                 "--category-file",
-                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_coco_categories.json"
+                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_cs34_categories.json"
             ],
             "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
             "console": "integratedTerminal",
@@ -140,7 +140,7 @@
                 "--evaluate-segmentation",
                 "--outputImg",
                 "--category-file",
-                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_coco_categories.json"
+                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_cs34_categories.json"
             ],
             "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
             "console": "integratedTerminal",
