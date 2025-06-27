@@ -88,6 +88,8 @@ class Val_model_heatmap(SuperPointFrontend_torch):
                 "Ensure 'num_segmentation_classes' matches the training setup."
             ) from err
         self.net = self.net.to(self.device)
+        # ensure evaluation mode so batch norm layers use stored statistics
+        self.net.eval()
         logging.info('successfully load pretrained model from: %s', self.weights_path)
         pass
 

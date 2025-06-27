@@ -45,6 +45,8 @@ class Val_model_subpixel(object):
         self.net.load_state_dict(checkpoint['model_state_dict'])
 
         self.net = self.net.to(self.device)
+        # use evaluation mode to avoid batch norm issues with small batches
+        self.net.eval()
         logging.info('successfully load pretrained model from: %s', self.weights_path)
         pass
 

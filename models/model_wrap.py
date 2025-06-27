@@ -108,7 +108,8 @@ class SuperPointFrontend_torch(object):
             # torch.no_grad(
         # self.net = self.net.cuda()
         self.net = self.net.to(self.device)
-        # self.net.eval()
+        # switch to eval mode so batchnorm layers rely on stored statistics
+        self.net.eval()
 
     def net_parallel(self):
         print("=== Let's use", torch.cuda.device_count(), "GPUs!")
