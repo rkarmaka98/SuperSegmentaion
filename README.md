@@ -65,15 +65,17 @@ datasets/ ($DATA_DIR)
 - MS-COCO 2017
     - [MS-COCO 2017 link](http://cocodataset.org/#download)
     - For panoptic training download the panoptic annotations and place the corresponding folders `panoptic_train2017/` and `panoptic_val2017/` with their JSON files under `COCO/annotations`.
-    - Use `utils/coco_panoptic_to_cs34.py` to convert panoptic PNGs to Cityscapes-34 labels when training semantic segmentation with 34 classes. Example:
+    - Use `utils/coco_panoptic_to_cs34.py` to convert panoptic PNGs to Cityscapes-34 labels when training semantic segmentation with 34 classes. The script writes grayscale masks which can be placed under `panoptic_cs34_train2017/` and `panoptic_cs34_val2017/`.
+      Example:
 
       ```bash
       python utils/coco_panoptic_to_cs34.py \
           --src panoptic_val2017 \
           --ann annotations/panoptic_val2017.json \
           --categories annotations/panoptic_coco_categories.json \
-          --dst cs34_masks
+          --dst panoptic_cs34_val2017
       ```
+    - Set `use_cs34_masks: true` in your configuration to load these grayscale masks instead of the standard panoptic labels. When enabled, the JSON annotations are not required.
 - HPatches
     - [HPatches link](http://icvl.ee.ic.ac.uk/vbalnt/hpatches/hpatches-sequences-release.tar.gz)
 
