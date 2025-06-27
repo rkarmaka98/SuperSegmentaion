@@ -120,7 +120,12 @@ def export_descriptor(config, output_dir, args):
     ###### check!!!
     count = 0
     for i, sample in tqdm(enumerate(test_loader)):
-        img_0, img_1 = sample["image"], sample["warped_image"]
+        # HPatches samples already contain warped pairs while some datasets like
+        # Cityscapes might omit them. In the latter case use the original image
+        # and an identity homography.
+        img_0 = sample["image"]
+        img_1 = sample.get("warped_image", img_0)
+        has_warp = "warped_image" in sample
 
         # first image, no matches
         # img = img_0
@@ -158,7 +163,7 @@ def export_descriptor(config, output_dir, args):
         else:
             pred_mask = None
 
-        if outputMatches == True:
+        if outputMatches and has_warp:
             tracker.update(pts, desc)
 
         # save keypoints
@@ -175,18 +180,21 @@ def export_descriptor(config, output_dir, args):
         outs = get_pts_desc_from_agent(val_agent, img_1, device=device)
         pts, desc = outs["pts"], outs["desc"]
 
-        if outputMatches == True:
+        if outputMatches and has_warp:
             tracker.update(pts, desc)
 
         pred.update({"warped_image": squeezeToNumpy(img_1)})
-        # print("total points: ", pts.shape)
-        pred.update(
-            {
-                "warped_prob": pts.transpose(),
-                "warped_desc": desc.transpose(),
-                "homography": squeezeToNumpy(sample["homography"]),
-            }
-        )
+        # If the sample provides a warped pair, also store the corresponding
+        # keypoints, descriptors and homography
+        if has_warp:
+            pred.update(
+                {
+                    "warped_prob": pts.transpose(),
+                    "warped_desc": desc.transpose(),
+                }
+            )
+            if "homography" in sample:
+                pred["homography"] = squeezeToNumpy(sample["homography"])
 
         if "segmentation_mask" in sample:
             mask_np = squeezeToNumpy(sample["segmentation_mask"])
@@ -196,7 +204,7 @@ def export_descriptor(config, output_dir, args):
             pred.update({"segmentation_mask": mask_np, "gt_mask": mask_np})
 
 
-        if outputMatches == True:
+        if outputMatches and has_warp:
             matches = tracker.get_matches()
             print("matches: ", matches.transpose().shape)
             pred.update({"matches": matches.transpose()})
