@@ -4,11 +4,47 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_, zeros_
 from models.unet_parts import *
 import numpy as np
 
 # from models.SubpixelNet import SubpixelNet
+
+# Lightweight ASPP module used for the segmentation head
+class ASPP(nn.Module):
+    def __init__(self, in_ch, out_ch, dilations=(1, 6, 12, 18)):
+        super().__init__()
+        self.blocks = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(in_ch, out_ch, 3, padding=d, dilation=d, bias=False),
+                nn.BatchNorm2d(out_ch),
+                nn.ReLU(inplace=True),
+            )
+            for d in dilations
+        ])
+        self.global_pool = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(in_ch, out_ch, 1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+        )
+        conv_in = out_ch * (len(dilations) + 1)
+        self.project = nn.Sequential(
+            nn.Conv2d(conv_in, out_ch, 1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        size = x.shape[-2:]
+        res = [blk(x) for blk in self.blocks]
+        gp = self.global_pool(x)
+        gp = F.interpolate(gp, size=size, mode="bilinear", align_corners=False)
+        res.append(gp)
+        x = torch.cat(res, dim=1)
+        return self.project(x)
+
 class SuperPointNet_gauss2(torch.nn.Module):
     """ Pytorch definition of SuperPoint Network. """
     def __init__(self, subpixel_channel=1, num_classes=1):
@@ -36,10 +72,14 @@ class SuperPointNet_gauss2(torch.nn.Module):
         self.bnDa = nn.BatchNorm2d(c5)
         self.convDb = torch.nn.Conv2d(c5, d1, kernel_size=1, stride=1, padding=0)
         self.bnDb = nn.BatchNorm2d(d1)
-        # Segmentation Head
-        self.seg_conv1 = nn.Conv2d(c4, 128, kernel_size=3, padding=1)
-        self.seg_bn1 = nn.BatchNorm2d(128)
-        self.seg_conv2 = nn.Conv2d(128, num_classes, kernel_size=1)
+        # Segmentation Head with ASPP for richer context
+        self.seg_aspp = ASPP(c4, 128)
+        self.seg_head = nn.Sequential(
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, num_classes, kernel_size=1)
+        )
 
         self.output = None
 
@@ -67,8 +107,8 @@ class SuperPointNet_gauss2(torch.nn.Module):
         cDa = self.relu(self.bnDa(self.convDa(x4)))
         desc = self.bnDb(self.convDb(cDa))
         # Segmentation Head producing per-pixel class logits
-        seg = self.relu(self.seg_bn1(self.seg_conv1(x4)))
-        seg_logits = self.seg_conv2(seg)
+        seg = self.seg_aspp(x4)
+        seg_logits = self.seg_head(seg)
 
         dn = torch.norm(desc, p=2, dim=1) # Compute the norm.
         desc = desc.div(torch.unsqueeze(dn, 1)) # Divide by norm to normalize.
