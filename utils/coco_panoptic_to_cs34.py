@@ -1,10 +1,17 @@
 # Convert COCO panoptic masks to Cityscapes-34 labels
-# Usage: python coco_panoptic_to_cs34.py --src panoptic_val2017 --dst cs34_masks
-# The script reads each COCO panoptic PNG and writes a grayscale mask with
-# Cityscapes labelIds. Unknown categories become 0.
+# Usage example:
+#   python coco_panoptic_to_cs34.py \
+#       --src panoptic_val2017 \
+#       --ann annotations/panoptic_val2017.json \
+#       --categories annotations/panoptic_coco_categories.json \
+#       --dst cs34_masks
+#
+# The script reads COCO panoptic PNGs together with their JSON annotations and
+# writes grayscale masks with Cityscapes labelIds. Unknown categories become 0.
 
 import argparse
 import cv2
+import json
 import numpy as np
 import pathlib
 from panopticapi.utils import rgb2id
@@ -57,30 +64,75 @@ COCO_TO_CS34 = {
 
 COCO_TO_CS34_DEFAULT = 0
 
+def load_categories(cat_json: pathlib.Path):
+    """Load COCO categories as a mapping from id to name."""
+    with open(cat_json, "r") as f:
+        data = json.load(f)
+    if isinstance(data, dict) and "categories" in data:
+        data = data["categories"]
+    return {c["id"]: c["name"] for c in data}
 
-def remap_png(coco_png_path: pathlib.Path, out_path: pathlib.Path):
+
+def load_segment_annotations(ann_json: pathlib.Path):
+    """Return mapping from file_name to segment id -> category id."""
+    with open(ann_json, "r") as f:
+        data = json.load(f)
+    mapping = {}
+    for ann in data.get("annotations", []):
+        seg_map = {seg["id"]: seg["category_id"] for seg in ann["segments_info"]}
+        mapping[ann["file_name"]] = seg_map
+    return mapping
+
+
+def remap_png(
+    coco_png_path: pathlib.Path,
+    seg_mapping: dict,
+    cat_map: dict,
+    out_path: pathlib.Path,
+):
     """Convert a COCO panoptic mask to Cityscapes-34 labelIds."""
     coco_rgb = cv2.imread(str(coco_png_path))[:, :, ::-1]  # BGR -> RGB
     coco_id32 = rgb2id(coco_rgb).astype(np.int32)
 
     # initialize output mask with default value 0
     cs_mask = np.full_like(coco_id32, COCO_TO_CS34_DEFAULT, dtype=np.uint8)
-    for coco_id, cs_id in COCO_TO_CS34.items():
-        cs_mask[coco_id32 == coco_id] = cs_id
+    for seg_id, cat_id in seg_mapping.items():
+        cs_id = cat_map.get(cat_id, COCO_TO_CS34_DEFAULT)
+        cs_mask[coco_id32 == seg_id] = cs_id
 
     cv2.imwrite(str(out_path), cs_mask)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Remap COCO panoptic masks to Cityscapes-34 labels")
-    parser.add_argument("--src", type=pathlib.Path, required=True, help="Folder with COCO panoptic PNGs")
-    parser.add_argument("--dst", type=pathlib.Path, required=True, help="Output folder for CS-34 masks")
+    parser = argparse.ArgumentParser(
+        description="Remap COCO panoptic masks to Cityscapes-34 labels"
+    )
+    parser.add_argument(
+        "--src", type=pathlib.Path, required=True, help="Folder with COCO panoptic PNGs"
+    )
+    parser.add_argument(
+        "--ann", type=pathlib.Path, required=True, help="Panoptic annotations JSON"
+    )
+    parser.add_argument(
+        "--categories", type=pathlib.Path, required=True, help="COCO categories JSON"
+    )
+    parser.add_argument(
+        "--dst", type=pathlib.Path, required=True, help="Output folder for CS-34 masks"
+    )
     args = parser.parse_args()
+
+    cat_names = load_categories(args.categories)
+    cat_map = {cid: COCO_TO_CS34.get(cid, COCO_TO_CS34_DEFAULT) for cid in cat_names}
+    seg_maps = load_segment_annotations(args.ann)
 
     args.dst.mkdir(exist_ok=True)
     for fn in tqdm.tqdm(list(args.src.glob("*.png"))):
-        remap_png(fn, args.dst / fn.name)
+        segments = seg_maps.get(fn.name)
+        if segments is None:
+            continue
+        remap_png(fn, segments, cat_map, args.dst / fn.name)
 
 
 if __name__ == "__main__":
     main()
+
