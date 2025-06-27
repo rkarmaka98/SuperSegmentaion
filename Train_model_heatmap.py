@@ -317,7 +317,8 @@ class Train_model_heatmap(Train_model_frontend):
                 **self.desc_params
             )
         else:
-            ze = torch.tensor([0]).to(self.device)
+            # use a 0-dim tensor to match descriptor loss shape
+            ze = torch.tensor(0.0, device=self.device)
             loss_desc, positive_dist, negative_dist = ze, ze, ze
 
         loss = loss_det + loss_det_warp
@@ -380,7 +381,8 @@ class Train_model_heatmap(Train_model_frontend):
                 )
                 loss_res_warp = (outs_res_warp["loss"] ** 2).mean()
             else:
-                loss_res_warp = torch.tensor([0]).to(self.device)
+                # zero warp loss if warping is disabled
+                loss_res_warp = torch.tensor(0.0, device=self.device)
             loss_res = loss_res_ori + loss_res_warp
             # print("loss_res requires_grad: ", loss_res.requires_grad)
             loss += loss_res
