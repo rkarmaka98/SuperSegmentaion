@@ -10,6 +10,20 @@ data:
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
     preprocessing:
         resize: [240, 320] #[512, 1024]
+    warped_pair:
+        enable: true
+        params:
+            translation: true
+            rotation: true
+            scaling: true
+            perspective: true
+            scaling_amplitude: 0.2
+            perspective_amplitude_x: 0.2
+            perspective_amplitude_y: 0.2
+            patch_ratio: 0.85
+            max_angle: 1.57
+            allow_artifacts: true
+        valid_border_margin: 3
 
 training:
     workers_test: 16
