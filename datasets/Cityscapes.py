@@ -20,7 +20,7 @@ class Cityscapes(data.Dataset):
     default_config = {
         'labels': None,
         'segmentation_labels': None,
-        'num_segmentation_classes': 19,
+        'num_segmentation_classes': 34,
         'cache_in_memory': False,
         'validation_size': 100,
         'truncate': None,

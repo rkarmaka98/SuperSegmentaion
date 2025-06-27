@@ -79,12 +79,13 @@ model:
 
 retrain: True
 reset_iter: True
-train_iter: 170000
-validation_interval: 2000
+train_iter: 150 #170000
+validation_interval: 10 #2000
 tensorboard_interval: 400
-save_interval: 2000
+save_interval: 100 #2000
 validation_size: 5
 truncate: 100
 
-pretrained:
+pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_100_checkpoint.pth.tar'
     # pretrained: 'logs/superpoint_coco_heat2_0/checkpoints/superPointNet_90000_checkpoint.pth.tar'
+
