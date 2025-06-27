@@ -81,7 +81,8 @@ def compute_miou(pred_mask, gt_mask, num_classes=None):
     """Compute mean Intersection over Union for segmentation masks.
 
     Both ``pred_mask`` and ``gt_mask`` are expected to have shape ``(H, W)``
-    with integer class ids.
+    with integer class ids. ``pred_mask`` will be resized to match ``gt_mask``
+    using nearest-neighbor interpolation if their dimensions differ.
 
     Parameters
     ----------
@@ -99,7 +100,9 @@ def compute_miou(pred_mask, gt_mask, num_classes=None):
         The mean IoU score.
     """
     if pred_mask.shape != gt_mask.shape:
-        raise ValueError("Prediction and ground truth masks must have the same shape")
+        # resize predicted mask to ground truth size when dimensions differ
+        pred_mask = cv2.resize(pred_mask, (gt_mask.shape[1], gt_mask.shape[0]),
+                               interpolation=cv2.INTER_NEAREST)
 
     if num_classes is None:
         classes = np.unique(np.concatenate([pred_mask.ravel(), gt_mask.ravel()]))
