@@ -1,5 +1,5 @@
 # Configuration for training SuperPoint on the Cityscapes dataset
-# Includes segmentation masks with 34 classes
+# Segmentation labels can be reduced to 4 coarse categories
 
 data:
     dataset: 'Cityscapes'
@@ -7,7 +7,8 @@ data:
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
     cache_in_memory: false
     load_segmentation: true
-    num_segmentation_classes: 34
+    reduce_to_4_categories: true
+    num_segmentation_classes: 4
     preprocessing:
         resize: [240, 320] #[512, 1024]  # images are downsampled for training
     augmentation:
@@ -60,7 +61,7 @@ model:
     detection_threshold: 0.015
     lambda_loss: 1
     lambda_segmentation: 1.0
-    num_segmentation_classes: 34
+    num_segmentation_classes: 4
     nms: 4
     dense_loss:
         enable: false
