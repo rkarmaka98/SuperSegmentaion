@@ -466,12 +466,20 @@ def evaluate(args, **options):
                 def getInliers_cv(matches, H=None, epi=3, verbose=False):
                     import cv2
                     # count inliers: use opencv homography estimation
+                    # OpenCV requires at least 4 correspondences for homography
+                    # estimation. If not enough matches are available simply
+                    # return an empty inlier mask instead of crashing.
+                    if matches.shape[0] < 4:
+                        if verbose:
+                            print("no valid estimation")
+                        return np.zeros(matches.shape[0], dtype=bool)
+
                     # Estimate the homography between the matches using RANSAC
                     H, inliers = cv2.findHomography(matches[:, [0, 1]],
                                                     matches[:, [2, 3]],
                                                     cv2.RANSAC)
                     inliers = inliers.flatten()
-                    print("Total matches: ", inliers.shape[0], 
+                    print("Total matches: ", inliers.shape[0],
                           ", inliers: ", inliers.sum(),
                           ", percentage: ", inliers.sum() / inliers.shape[0])
                     return inliers
