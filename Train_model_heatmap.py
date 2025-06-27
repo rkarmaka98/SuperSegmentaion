@@ -185,16 +185,26 @@ class Train_model_heatmap(Train_model_frontend):
 
         task = "train" if train else "val"
         tb_interval = self.config["tensorboard_interval"]
-        if_warp = self.config['data']['warped_pair']['enable']
 
         self.scalar_dict, self.images_dict, self.hist_dict = {}, {}, {}
         ## get the inputs
         # logging.info('get input img and label')
-        img, labels_2D, mask_2D = (
-            sample["image"],
-            sample["labels_2D"],
-            sample["valid_mask"],
+        img = sample["image"]
+        # keypoint labels may be absent when fine-tuning on Cityscapes
+        labels_2D = sample.get("labels_2D")
+        mask_2D = sample.get("valid_mask")
+
+        has_kpt_labels = labels_2D is not None
+
+        if_warp = (
+            self.config['data']['warped_pair']['enable']
+            and has_kpt_labels
+            and 'warped_img' in sample
         )
+
+        # provide default mask if dataset doesn't supply one
+        if mask_2D is None:
+            mask_2D = torch.ones_like(img[:, :1, :, :])
         # img, labels = img.to(self.device), labels_2D.to(self.device)
 
         # variables
@@ -210,17 +220,16 @@ class Train_model_heatmap(Train_model_frontend):
         #     sample['warped_labels'].to(self.device), \
         #     sample['warped_valid_mask'].to(self.device)
         if if_warp:
-            img_warp, labels_warp_2D, mask_warp_2D = (
-                sample["warped_img"],
-                sample["warped_labels"],
-                sample["warped_valid_mask"],
-            )
+            img_warp = sample["warped_img"]
+            labels_warp_2D = sample.get("warped_labels")
+            mask_warp_2D = sample.get("warped_valid_mask", mask_2D)
 
         # homographies
         # mat_H, mat_H_inv = \
         # sample['homographies'].to(self.device), sample['inv_homographies'].to(self.device)
         if if_warp:
-            mat_H, mat_H_inv = sample["homographies"], sample["inv_homographies"]
+            mat_H = sample.get("homographies")
+            mat_H_inv = sample.get("inv_homographies")
 
         # zero the parameter gradients
         self.optimizer.zero_grad()
@@ -242,52 +251,54 @@ class Train_model_heatmap(Train_model_frontend):
                     semi_warp, coarse_desc_warp = outs_warp["semi"], outs_warp["desc"]
                 pass
 
-        # detector loss
+        # detector loss -- skip when no keypoint labels are available
         from utils.utils import labels2Dto3D
 
-        if self.gaussian:
-            labels_2D = sample["labels_2D_gaussian"]
-            if if_warp:
-                warped_labels = sample["warped_labels_gaussian"]
-        else:
-            labels_2D = sample["labels_2D"]
-            if if_warp:
-                warped_labels = sample["warped_labels"]
-
-        add_dustbin = False
-        if det_loss_type == "l2":
-            add_dustbin = False
-        elif det_loss_type == "softmax":
-            add_dustbin = True
-
-        labels_3D = labels2Dto3D(
-            labels_2D.to(self.device), cell_size=self.cell_size, add_dustbin=add_dustbin
-        ).float()
         mask_3D_flattened = self.getMasks(mask_2D, self.cell_size, device=self.device)
-        loss_det = self.detector_loss(
-            input=outs["semi"],
-            target=labels_3D.to(self.device),
-            mask=mask_3D_flattened,
-            loss_type=det_loss_type,
-        )
-        # warp
-        if if_warp:
+
+        if has_kpt_labels:
+            if self.gaussian:
+                labels_2D = sample.get("labels_2D_gaussian", labels_2D)
+                if if_warp:
+                    warped_labels = sample.get("warped_labels_gaussian")
+            else:
+                labels_2D = labels_2D
+                if if_warp:
+                    warped_labels = labels_warp_2D
+
+            add_dustbin = det_loss_type == "softmax"
+
             labels_3D = labels2Dto3D(
-                warped_labels.to(self.device),
-                cell_size=self.cell_size,
-                add_dustbin=add_dustbin,
+                labels_2D.to(self.device), cell_size=self.cell_size, add_dustbin=add_dustbin
             ).float()
-            mask_3D_flattened = self.getMasks(
-                mask_warp_2D, self.cell_size, device=self.device
-            )
-            loss_det_warp = self.detector_loss(
-                input=outs_warp["semi"],
+            loss_det = self.detector_loss(
+                input=outs["semi"],
                 target=labels_3D.to(self.device),
                 mask=mask_3D_flattened,
                 loss_type=det_loss_type,
             )
+
+            if if_warp and warped_labels is not None:
+                labels_3D = labels2Dto3D(
+                    warped_labels.to(self.device),
+                    cell_size=self.cell_size,
+                    add_dustbin=add_dustbin,
+                ).float()
+                mask_3D_flattened = self.getMasks(
+                    mask_warp_2D, self.cell_size, device=self.device
+                )
+                loss_det_warp = self.detector_loss(
+                    input=outs_warp["semi"],
+                    target=labels_3D.to(self.device),
+                    mask=mask_3D_flattened,
+                    loss_type=det_loss_type,
+                )
+            else:
+                loss_det_warp = torch.tensor(0.0, device=self.device)
         else:
-            loss_det_warp = torch.tensor([0]).float().to(self.device)
+            # no supervision available
+            loss_det = torch.tensor(0.0, device=self.device)
+            loss_det_warp = torch.tensor(0.0, device=self.device)
 
 
         ## get labels, masks, loss for detection
@@ -306,8 +317,7 @@ class Train_model_heatmap(Train_model_frontend):
         # print("mask_warp_2D: ", mask_warp_2D.shape)
 
         # descriptor loss
-        if lambda_loss > 0:
-            assert if_warp == True, "need a pair of images"
+        if lambda_loss > 0 and has_kpt_labels and if_warp:
             loss_desc, mask, positive_dist, negative_dist = self.descriptor_loss(
                 coarse_desc,
                 coarse_desc_warp,
@@ -448,40 +458,41 @@ class Train_model_heatmap(Train_model_frontend):
                 images_dict.update({name + "_nms_overlap": nms_overlap})
 
             from utils.var_dim import toNumpy
-            update_overlap(
-                self.images_dict,
-                labels_2D,
-                heatmap_org_nms_batch[np.newaxis, ...],
-                img,
-                "original",
-            )
+            if has_kpt_labels:
+                update_overlap(
+                    self.images_dict,
+                    labels_2D,
+                    heatmap_org_nms_batch[np.newaxis, ...],
+                    img,
+                    "original",
+                )
 
-            update_overlap(
-                self.images_dict,
-                labels_2D,
-                toNumpy(heatmap_org),
-                img,
-                "original_heatmap",
-            )
-            if if_warp:
                 update_overlap(
                     self.images_dict,
-                    labels_warp_2D,
-                    heatmap_warp_nms_batch[np.newaxis, ...],
-                    img_warp,
-                    "warped",
+                    labels_2D,
+                    toNumpy(heatmap_org),
+                    img,
+                    "original_heatmap",
                 )
-                update_overlap(
-                    self.images_dict,
-                    labels_warp_2D,
-                    toNumpy(heatmap_warp),
-                    img_warp,
-                    "warped_heatmap",
-                )
+                if if_warp:
+                    update_overlap(
+                        self.images_dict,
+                        labels_warp_2D,
+                        heatmap_warp_nms_batch[np.newaxis, ...],
+                        img_warp,
+                        "warped",
+                    )
+                    update_overlap(
+                        self.images_dict,
+                        labels_warp_2D,
+                        toNumpy(heatmap_warp),
+                        img_warp,
+                        "warped_heatmap",
+                    )
             # residuals
             from utils.losses import do_log
 
-            if self.gaussian:
+            if has_kpt_labels and self.gaussian:
                 # original: gt
                 self.get_residual_loss(
                     sample["labels_2D"],
@@ -529,12 +540,13 @@ class Train_model_heatmap(Train_model_frontend):
             #     to_floatTensor(heatmap_warp_nms_batch[:, np.newaxis, ...]),
             #     sample["warped_labels"],
             # )
-            pr_mean = self.batch_precision_recall(
-                to_floatTensor(heatmap_org_nms_batch[:, np.newaxis, ...]),
-                sample["labels_2D"],
-            )
-            print("pr_mean")
-            self.scalar_dict.update(pr_mean)
+            if has_kpt_labels:
+                pr_mean = self.batch_precision_recall(
+                    to_floatTensor(heatmap_org_nms_batch[:, np.newaxis, ...]),
+                    sample["labels_2D"],
+                )
+                print("pr_mean")
+                self.scalar_dict.update(pr_mean)
 
             self.printLosses(self.scalar_dict, task)
             self.tb_images_dict(task, self.images_dict, max_img=2)
