@@ -9,32 +9,10 @@ data:
     root: 'datasets/Cityscapes'      # path to Cityscapes images
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
     preprocessing:
-        resize: [512, 1024]
-    gaussian_label:
-        enable: false
-        sigma: 1.
-    augmentation:
-        photometric:
-            enable: false
-    homography_adaptation:
-        enable: true
-        num: 100
-        aggregation: 'sum'
-        filter_counts: 0
-        homographies:
-            params:
-                translation: true
-                rotation: true
-                scaling: true
-                perspective: true
-                scaling_amplitude: 0.2
-                perspective_amplitude_x: 0.2
-                perspective_amplitude_y: 0.2
-                allow_artifacts: true
-                patch_ratio: 0.85
+        resize: [240, 320] #[512, 1024]
 
 training:
-    workers_test: 2
+    workers_test: 16
 
 # model used for exporting
 front_end_model: 'Val_model_heatmap'  # 'Train_model_frontend'
@@ -42,16 +20,30 @@ front_end_model: 'Val_model_heatmap'  # 'Train_model_frontend'
 model:
     name: 'SuperPointNet_gauss2'
     params: {}
+    lambda_segmentation: 1.0
+    num_segmentation_classes: 34
+
+    # learning_rate: 0.0001 # 0.0001
+    detection_threshold: 0.015 # 0.015
+
     batch_size: 1
     eval_batch_size: 1
-    detection_threshold: 0.015
+    # output parameters
+    learning_rate: 0.001
+    detection_threshold: 0.015 # 0.001
     nms: 4
-    top_k: 600
+    top_k: 1000
+    nn_thresh: 1.0 # 0.7
+    homography_adaptation:
+        num: 0
     subpixel:
         enable: true
-
-# Path to the fine-tuned checkpoint to load before export
-pretrained: 'logs/superpoint_cityscapes/checkpoints/superPointNet_best.pth.tar'
+        patch_size: 5
+    rand_noise:
+        enable: false
+        sigma: 0.2
+    # Path to the fine-tuned checkpoint to load before export
+    pretrained: 'logs/superpoint_cityscapes/checkpoints/superPointNet_100_checkpoint.pth.tar'
 
 # evaluate only once
 eval_iter: 100
