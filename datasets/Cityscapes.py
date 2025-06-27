@@ -9,6 +9,17 @@ from settings import DATA_PATH
 from utils.tools import dict_update
 
 
+# mapping from 34 Cityscapes labelIds to 4 broad categories
+# 0 -> Static Structure, 1 -> Flat Surfaces,
+# 2 -> Dynamic Objects, 3 -> Unstable/Ambiguous
+CS34_TO_4 = {
+    11: 0, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0, 19: 0, 20: 0,
+    7: 1, 8: 1, 9: 1, 10: 1, 22: 1,
+    24: 2, 25: 2, 26: 2, 27: 2, 28: 2, 29: 2, 30: 2, 31: 2, 32: 2, 33: 2,
+    21: 3, 23: 3, 6: 3, 5: 3, 4: 3, 0: 3, 1: 3, 2: 3, 3: 3,
+}
+
+
 class Cityscapes(data.Dataset):
     """Dataset loader for Cityscapes images and semantic labels.
 
@@ -21,6 +32,8 @@ class Cityscapes(data.Dataset):
         'labels': None,
         'segmentation_labels': None,
         'num_segmentation_classes': 34,
+        # optionally map the 34 labelIds to 4 coarse categories
+        'reduce_to_4_categories': False,
         'cache_in_memory': False,
         'validation_size': 100,
         'truncate': None,
@@ -86,6 +99,14 @@ class Cityscapes(data.Dataset):
             else:
                 logging.warning('Missing segmentation label file: %s', mask_path)
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
+            if self.config.get('reduce_to_4_categories', False):
+                # convert CS-34 labels to the 4-category scheme
+                mask_np = seg_mask.numpy()
+                mapped = np.full_like(mask_np, 3)
+                for k, v in CS34_TO_4.items():
+                    mapped[mask_np == k] = v
+                seg_mask = torch.from_numpy(mapped)
+
             # semantic segmentation mask with dtype long and shape (H, W)
             output['segmentation_mask'] = seg_mask
 
