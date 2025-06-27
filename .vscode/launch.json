@@ -118,7 +118,7 @@
             "program": "${workspaceFolder}\\export.py",
             "args": [
                 "export_descriptor",
-                "configs/superpoint_cityscapes_finetune.yaml",
+                "configs/superpoint_cityscapes_export.yaml",
                 "cityscapes_export",
                 "--export-segmentation"
             ],

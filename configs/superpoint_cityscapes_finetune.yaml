@@ -1,5 +1,5 @@
 # Configuration for training SuperPoint on the Cityscapes dataset
-# Includes segmentation masks with 19 classes
+# Includes segmentation masks with 34 classes
 
 data:
     dataset: 'Cityscapes'
@@ -9,7 +9,7 @@ data:
     load_segmentation: true
     num_segmentation_classes: 34
     preprocessing:
-        resize: [512, 1024]  # images are downsampled for training
+        resize: [240, 320] #[512, 1024]  # images are downsampled for training
     augmentation:
         photometric:
             enable: true
@@ -44,7 +44,7 @@ data:
 
 front_end_model: 'Train_model_heatmap'  # use heatmap detector
 training:
-    workers_train: 4
+    workers_train: 12
     workers_val: 2
 
 
@@ -80,7 +80,7 @@ model:
 retrain: True
 reset_iter: True
 train_iter: 150 #170000
-validation_interval: 10 #2000
+validation_interval: 50 #2000
 tensorboard_interval: 400
 save_interval: 100 #2000
 validation_size: 5
