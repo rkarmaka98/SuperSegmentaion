@@ -10,6 +10,7 @@ data:
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
     preprocessing:
         resize: [240, 320] #[512, 1024]
+    reduce_to_4_categories: true
     warped_pair:
         enable: true
         params:
@@ -35,7 +36,7 @@ model:
     name: 'SuperPointNet_gauss2'
     params: {}
     lambda_segmentation: 1.0
-    num_segmentation_classes: 34
+    num_segmentation_classes: 4
 
     # learning_rate: 0.0001 # 0.0001
     detection_threshold: 0.015 # 0.015

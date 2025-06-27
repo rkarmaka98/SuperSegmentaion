@@ -121,6 +121,9 @@ python export.py export_descriptor configs/superpoint_cityscapes_export.yaml cit
 python evaluation.py logs/cityscapes_export/predictions --evaluate-segmentation
 ```
 
+To visualize the 4-category mapping, pass `--category-file utils/cs4_categories.json`
+to `evaluation.py`.
+
 Both configs load a checkpoint via their `pretrained` option. Update this path
 to point at the model you wish to fine-tune or evaluate.
 

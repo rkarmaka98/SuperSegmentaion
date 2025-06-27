@@ -1,0 +1,6 @@
+[
+    {"id": 0, "name": "static structure", "color": [0, 0, 255]},
+    {"id": 1, "name": "flat surfaces", "color": [0, 255, 0]},
+    {"id": 2, "name": "dynamic objects", "color": [255, 0, 0]},
+    {"id": 3, "name": "unstable/ambiguous", "color": [255, 255, 255]}
+]
