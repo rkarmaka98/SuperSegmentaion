@@ -100,11 +100,11 @@ class Cityscapes(data.Dataset):
                 seg_mask = torch.tensor(mask, dtype=torch.long)
                 max_val = int(seg_mask.max())
                 num_cls = int(self.config.get('num_segmentation_classes', 0))
-                if max_val >= num_cls > 0:
-                    logging.warning(
-                        "Segmentation label %d exceeds num_segmentation_classes=%d in %s",
-                        max_val, num_cls, mask_path,
-                    )
+                # if max_val >= num_cls > 0:
+                #     logging.warning(
+                #         "Segmentation label %d exceeds num_segmentation_classes=%d in %s",
+                #         max_val, num_cls, mask_path,
+                #     )
             else:
                 logging.warning('Missing segmentation label file: %s', mask_path)
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
