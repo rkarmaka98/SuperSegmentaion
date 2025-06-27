@@ -14,6 +14,12 @@ from utils.utils import filter_points
 from pycocotools.coco import COCO
 
 class Coco(data.Dataset):
+    """COCO dataset loader.
+
+    The returned sample may include ``segmentation_mask`` with shape ``(H, W)``
+    and dtype ``torch.long`` when segmentation annotations are available.
+    """
+
     default_config = {
         'labels': None,
         'segmentation_labels': None,
@@ -294,7 +300,8 @@ class Coco(data.Dataset):
                     anno_mask = self.coco.annToMask(ann)
                     anno_mask = cv2.resize(anno_mask, (W,H), interpolation=cv2.INTER_NEAREST)
                     mask = np.maximum(mask, anno_mask)
-            input['segmentation_mask'] = torch.tensor(mask, dtype=torch.uint8).view(1, H, W)
+            # store instance segmentation as (H, W) tensor with dtype long
+            input['segmentation_mask'] = torch.tensor(mask, dtype=torch.long)
 
         if self.config.get('num_segmentation_classes', 0) > 0:
             seg_path = None
