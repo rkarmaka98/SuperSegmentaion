@@ -80,6 +80,9 @@ def to3dim(img):
 def compute_miou(pred_mask, gt_mask, num_classes=None):
     """Compute mean Intersection over Union for segmentation masks.
 
+    Both ``pred_mask`` and ``gt_mask`` are expected to have shape ``(H, W)``
+    with integer class ids.
+
     Parameters
     ----------
     pred_mask : np.ndarray
@@ -227,7 +230,10 @@ def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None, cla
     return overlay
 
 def smooth_mask(mask, kernel_size=3):
-    """Apply simple morphological post-processing to clean up a mask."""
+    """Apply simple morphological post-processing to clean up a mask.
+
+    ``mask`` should be an array of shape ``(H, W)`` containing class ids.
+    """
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
     mask = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_OPEN, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)

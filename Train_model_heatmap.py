@@ -328,6 +328,7 @@ class Train_model_heatmap(Train_model_frontend):
         if self.lambda_segmentation > 0 and sample.get("segmentation_mask") is not None:
             if "segmentation" in outs:
                 seg_pred = outs["segmentation"]
+                # target mask provided as (H, W) long tensor
                 seg_target = sample["segmentation_mask"].long().to(self.device)
                 if seg_pred.shape[-2:] != seg_target.shape[-2:]:
                     seg_pred = F.interpolate(

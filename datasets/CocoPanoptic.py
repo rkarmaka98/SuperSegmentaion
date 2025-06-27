@@ -13,7 +13,11 @@ from settings import DATA_PATH
 
 
 class CocoPanoptic(Coco):
-    """COCO dataset with panoptic segmentation support."""
+    """COCO dataset with panoptic segmentation support.
+
+    When ``load_panoptic`` is enabled, ``segmentation_mask`` is returned as a
+    ``torch.long`` tensor of shape ``(H, W)``.
+    """
 
     default_config = Coco.default_config.copy()
     # extra switch to enable panoptic loading
@@ -75,7 +79,9 @@ class CocoPanoptic(Coco):
                             num_cls,
                         )
                     cat_map = np.clip(cat_map, 0, num_cls - 1)
+
                 seg_mask = torch.tensor(cat_map, dtype=torch.long)
+                
             else:
                 # skip mask if panoptic file missing
                 logging.warning('Missing panoptic file for image %s', image_name)
