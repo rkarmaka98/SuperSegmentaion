@@ -76,7 +76,8 @@ class CocoPanoptic(Coco):
                     cat_map = np.clip(cat_map, 0, num_cls - 1)
                 input_dict['segmentation_mask'] = torch.tensor(cat_map, dtype=torch.long)
             else:
+                # skip mask if panoptic file missing
                 logging.warning('Missing panoptic file for image %s', image_name)
-                input_dict['segmentation_mask'] = torch.zeros((H, W), dtype=torch.long)
+                pass
 
         return input_dict
