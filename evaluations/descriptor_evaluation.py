@@ -108,21 +108,35 @@ def compute_homography(data, keep_k_points=1000, correctness_thresh=3, orb=False
     
 
     # Estimate the homography between the matches using RANSAC
-    H, inliers = cv2.findHomography(m_keypoints[:, [1, 0]],
-                                    m_warped_keypoints[:, [1, 0]],
-                                    cv2.RANSAC)
+    # Estimate homography only when there are enough matches. OpenCV requires
+    # at least four correspondences, otherwise it raises an exception. The
+    # original code did not check for this which caused a crash during
+    # evaluation when few matches were found.
+    if m_keypoints.shape[0] >= 4 and m_warped_keypoints.shape[0] >= 4:
+        H, inliers = cv2.findHomography(m_keypoints[:, [1, 0]],
+                                        m_warped_keypoints[:, [1, 0]],
+                                        cv2.RANSAC)
+    else:
+        H, inliers = None, None
 
     # H, inliers = cv2.findHomography(matches_pts[:, [1, 0]],
     #                                 matches_pts[:, [3, 2]],
     #                                 cv2.RANSAC)
                                     
-    inliers = inliers.flatten()
+    # inliers might be None when not enough matches were provided for
+    # homography estimation. To keep the downstream code simple we
+    # return an empty array in that case.
+    if inliers is not None:
+        inliers = inliers.flatten()
+    else:
+        inliers = np.array([])
     # print(f"cv_matches: {np.array(cv_matches).shape}, inliers: {inliers.shape}")
 
     # Compute correctness
     if H is None:
         correctness = 0
         H = np.identity(3)
+        mean_dist = np.inf
         print("no valid estimation")
     else:
         corners = np.array([[0, 0, 1],
