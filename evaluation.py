@@ -19,7 +19,7 @@ import logging
 import os
 from tqdm import tqdm
 from utils.draw import plot_imgs
-from utils.logging import *
+from utils.custom_logging import *
 
 def draw_matches_cv(data, matches, plot_points=True):
     if plot_points:
