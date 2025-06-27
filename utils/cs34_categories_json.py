@@ -56,7 +56,7 @@ def main():
     parser.add_argument(
         "--dst",
         type=pathlib.Path,
-        default=pathlib.Path("annotations/panoptic_cs34_categories.json"),
+        default=pathlib.Path("datasets/COCO/annotations/panoptic_cs34_categories.json"),
         help="Output path for the JSON file",
     )
     args = parser.parse_args()
