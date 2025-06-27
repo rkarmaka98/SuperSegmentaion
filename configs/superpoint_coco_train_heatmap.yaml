@@ -16,7 +16,10 @@ data:
     # Adding COCO segmentation tasks
     load_segmentation: false
     load_panoptic: true  # set true to train with panoptic labels
-    num_segmentation_classes: 201 
+    # use grayscale masks from panoptic_cs34_* folders
+    use_cs34_masks: true
+    # Set to 34 when using CS-34 masks under panoptic_cs34_* folders
+    num_segmentation_classes: 34
     preprocessing:
         resize: [240, 320]
         # resize: [480, 640]
