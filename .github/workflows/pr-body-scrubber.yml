@@ -1,0 +1,36 @@
+name: Clean PR Body
+
+on:
+  pull_request:
+    # Add more types if bots/users might re-inject the template later
+    types: [opened]
+
+permissions:
+  pull-requests: write   # needed for pulls.update
+
+jobs:
+  scrub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Strip the ‘Testing’ block
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const pr   = context.payload.pull_request;
+            let   body = pr.body || '';
+
+            // Delete everything from the first “## Testing” heading to EOF
+            body = body.replace(/##\s*Testing[\s\S]*$/i, '').trim();
+
+            // Update only if we actually changed the text
+            if (body !== (pr.body || '').trim()) {
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                pull_number: pr.number,
+                body
+              });
+              core.notice(`Removed Testing section from PR #${pr.number}`);
+            } else {
+              core.notice('No Testing section found – nothing to strip');
+            }
