@@ -95,14 +95,57 @@
             "justMyCode": true
             },
             {
-            "name": "Python: Current File (Windows, debugpy)",
+            "name": "Finetuning on Cityscapes",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}\\train4.py",
+            "args": [
+                "train_joint",
+                "configs/superpoint_cityscapes_finetune.yaml",
+                "superpoint_cityscapes",
+                "--eval",
+                "--debug"
+            ],
             "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
             "console": "integratedTerminal",
             "stopOnEntry": true,
-            "justMyCode": false
+            "justMyCode": true
+            },
+            {
+            "name": "Export on Cityscapes",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_descriptor",
+                "configs/superpoint_cityscapes_finetune.yaml",
+                "cityscapes_export",
+                "--export-segmentation"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            },
+            {
+            "name": "Evaluating on Cityscapes",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\evaluation.py",
+            "args": [
+                "logs/cityscapes_export/predictions",
+                "--repeatibility",
+                "--homography",
+                "--plotMatching",
+                "--evaluate-segmentation",
+                "--outputImg",
+                "--category-file",
+                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_coco_categories.json"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
             }
     ]
 
