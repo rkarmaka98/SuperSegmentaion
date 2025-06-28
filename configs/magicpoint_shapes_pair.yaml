@@ -39,11 +39,11 @@ data:
                 rotation: true
                 scaling: true
                 perspective: true
-                scaling_amplitude: 0.2
-                perspective_amplitude_x: 0.2
-                perspective_amplitude_y: 0.2
-                patch_ratio: 0.8
-                max_angle: 1.57  # 3.14
+                scaling_amplitude: 0.05  # reduced for gentler warp
+                perspective_amplitude_x: 0.05  # reduced for gentler warp
+                perspective_amplitude_y: 0.05  # reduced for gentler warp
+                patch_ratio: 0.95  # wider valid area
+                max_angle: 0.3  # ~17 deg
                 allow_artifacts: true
                 translation_overflow: 0.05
             valid_border_margin: 2
@@ -54,11 +54,11 @@ data:
             rotation: true
             scaling: true
             perspective: true
-            scaling_amplitude: 0.2
-            perspective_amplitude_x: 0.2
-            perspective_amplitude_y: 0.2
-            patch_ratio: 0.85
-            max_angle: 1.57
+            scaling_amplitude: 0.05  # reduced for gentler warp
+            perspective_amplitude_x: 0.05  # reduced for gentler warp
+            perspective_amplitude_y: 0.05  # reduced for gentler warp
+            patch_ratio: 0.95  # wider valid area
+            max_angle: 0.3
             allow_artifacts: true # true
         valid_border_margin: 3
 
