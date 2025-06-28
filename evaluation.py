@@ -134,32 +134,43 @@ def colorize_mask(mask, num_classes=None, class_colors=None):
 
     if class_colors is not None:
         colors = np.asarray(class_colors)
+        # ensure user-supplied colors are RGB triples
         assert colors.shape[1] == 3
-    elif num_classes == 4:
-        # sensible default palette for the 4 Cityscapes categories
-        colors = np.array(
-            [
-                [0, 0, 255],     # static structure (blue)
-                [0, 255, 0],     # flat surfaces   (green)
-                [255, 0, 0],     # dynamic objects (red)
-                [255, 255, 255], # unstable/ambiguous (white)
-            ],
-            dtype=float,
-        ) / 255.0
-    elif num_classes <= 20:
-        # use matplotlib's tab20 for small numbers of classes
-        cmap = plt.get_cmap("tab20")
-        colors = cmap(np.arange(num_classes))[:, :3]
+        # convert to 0-255 range if they were normalized
+        if colors.max() <= 1:
+            colors = (colors * 255).astype(np.uint8)
+        else:
+            colors = colors.astype(np.uint8)
+        colors = colors[:, [2, 1, 0]]  # convert RGB -> BGR
     else:
-        # Generate distinct colors in HSV space to avoid repetition
-        hsv = np.stack([
-            np.linspace(0, 1, num_classes, endpoint=False),
-            np.ones(num_classes),
-            np.ones(num_classes)
-        ], axis=1)
-        colors = matplotlib.colors.hsv_to_rgb(hsv)
+        if num_classes == 4:
+            # sensible default palette for the 4 Cityscapes categories
+            colors = np.array(
+                [
+                    [0, 0, 255],     # static structure (blue)
+                    [0, 255, 0],     # flat surfaces   (green)
+                    [255, 0, 0],     # dynamic objects (red)
+                    [255, 255, 255], # unstable/ambiguous (white)
+                ],
+                dtype=float,
+            ) / 255.0
+        elif num_classes <= 20:
+            # use matplotlib's tab20 for small numbers of classes
+            cmap = plt.get_cmap("tab20")
+            colors = cmap(np.arange(num_classes))[:, :3]
+        else:
+            # Generate distinct colors in HSV space to avoid repetition
+            hsv = np.stack([
+                np.linspace(0, 1, num_classes, endpoint=False),
+                np.ones(num_classes),
+                np.ones(num_classes)
+            ], axis=1)
+            colors = matplotlib.colors.hsv_to_rgb(hsv)
 
-    colors = (colors * 255).astype(np.uint8)[:, [2, 1, 0]]  # to BGR
+        # convert from float RGB [0,1] to uint8 BGR
+        colors = (colors * 255).astype(np.uint8)
+        colors = colors[:, [2, 1, 0]]
+
     return colors[mask.astype(int)]
 
 
