@@ -40,7 +40,7 @@ class Cityscapes(data.Dataset):
         'reduce_to_4_categories': False,
         'cache_in_memory': False,
         'validation_size': 100,
-        'truncate': None,
+        'truncate': 0,
         'load_segmentation': True,
         'preprocessing': {
             'resize': [256, 512]
