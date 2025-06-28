@@ -21,11 +21,11 @@ data:
                 rotation: true
                 scaling: true
                 perspective: true
-                scaling_amplitude: 0.2
-                perspective_amplitude_x: 0.2
-                perspective_amplitude_y: 0.2
+                scaling_amplitude: 0.05  # reduced for gentler warp
+                perspective_amplitude_x: 0.05  # reduced for gentler warp
+                perspective_amplitude_y: 0.05  # reduced for gentler warp
                 allow_artifacts: true
-                patch_ratio: 0.85
+                patch_ratio: 0.95  # wider valid area
 
 training:
     workers_test: 2
