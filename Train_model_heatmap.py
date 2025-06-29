@@ -196,10 +196,11 @@ class Train_model_heatmap(Train_model_frontend):
 
         has_kpt_labels = labels_2D is not None
 
+        # enable warping when the dataset provides a warped pair. Some datasets
+        # use the key 'warped_image' instead of 'warped_img'.
         if_warp = (
             self.config['data']['warped_pair']['enable']
-            and has_kpt_labels
-            and 'warped_img' in sample
+            and ('warped_img' in sample or 'warped_image' in sample)
         )
 
         # provide default mask if dataset doesn't supply one
@@ -220,7 +221,7 @@ class Train_model_heatmap(Train_model_frontend):
         #     sample['warped_labels'].to(self.device), \
         #     sample['warped_valid_mask'].to(self.device)
         if if_warp:
-            img_warp = sample["warped_img"]
+            img_warp = sample.get("warped_img", sample.get("warped_image"))
             labels_warp_2D = sample.get("warped_labels")
             mask_warp_2D = sample.get("warped_valid_mask", mask_2D)
 
@@ -229,7 +230,13 @@ class Train_model_heatmap(Train_model_frontend):
         # sample['homographies'].to(self.device), sample['inv_homographies'].to(self.device)
         if if_warp:
             mat_H = sample.get("homographies")
+            if mat_H is None:
+                mat_H = sample.get("homography")
+                if mat_H is not None:
+                    mat_H = mat_H.unsqueeze(0)
             mat_H_inv = sample.get("inv_homographies")
+            if mat_H_inv is None and mat_H is not None:
+                mat_H_inv = torch.inverse(mat_H)
 
         # zero the parameter gradients
         self.optimizer.zero_grad()
