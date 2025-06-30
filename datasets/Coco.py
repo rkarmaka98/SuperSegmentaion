@@ -449,6 +449,8 @@ class Coco(data.Dataset):
                             erosion_radius=self.config['warped_pair']['valid_border_margin'])  # can set to other value
                 input.update({'warped_valid_mask': valid_mask})
                 input.update({'homographies': homography, 'inv_homographies': inv_homography})
+                # provide single homography for compatibility with export scripts
+                input.update({'homography': homography})
 
             # labels = self.labels2Dto3D(self.cell_size, labels)
             # labels = torch.from_numpy(labels[np.newaxis,:,:])
