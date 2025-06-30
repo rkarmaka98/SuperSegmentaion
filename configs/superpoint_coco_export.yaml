@@ -58,7 +58,7 @@ model:
         enable: false
         sigma: 0.2
     # Path to the fine-tuned checkpoint to load before export
-    pretrained: 'path/to/your/checkpoint.pth.tar'
+    pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_9000_checkpoint.pth.tar'
 
 # evaluate only once
 eval_iter: 100
