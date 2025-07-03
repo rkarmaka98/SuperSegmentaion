@@ -76,6 +76,7 @@ datasets/ ($DATA_DIR)
           --dst panoptic_cs34_val2017
       ```
     - Set `load_panoptic: true` and `use_cs34_masks: true` in your configuration to train with these grayscale masks instead of the standard panoptic labels. When both options are enabled, the JSON annotations are not required.
+    - Run `utils/remove_unpaired_coco_images.py` to delete images in `train2017/` that do not have a corresponding CS‑34 mask if you want to keep the dataset consistent.
     - For evaluation, generate a category file matching the Cityscapes‑34 IDs:
 
       ```bash
