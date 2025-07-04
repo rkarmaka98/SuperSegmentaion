@@ -95,6 +95,21 @@
             "justMyCode": true
             },
             {
+            "name": "Exporting detections To Cityscape via Homography Adaptation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_detector_homoAdapt",
+                "configs/magicpoint_cityscape_export.yaml",
+                "magicpoint_synth_homoAdapt_cityscape"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            },
+            {
             "name": "Finetuning on Cityscapes",
             "type": "debugpy",
             "request": "launch",
