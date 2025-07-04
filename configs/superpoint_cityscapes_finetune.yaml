@@ -10,7 +10,7 @@ data:
     reduce_to_4_categories: true
     num_segmentation_classes: 4
     preprocessing:
-        resize: [512, 1024] #[512, 1024]  # images are downsampled for training
+        resize: [256, 512] #[512, 1024]  # images are downsampled for training
     augmentation:
         photometric:
             enable: true
@@ -28,24 +28,24 @@ data:
                 motion_blur: {max_kernel_size: 3}
         homographic:
             enable: true
-            num_homographies: 100       # samples per image for aggregation
-            max_angle: 0.17             # in radians (~10°)
-            translate: 0.1              # relative to image size
-            scale: [0.9, 1.1]
-            perspective: 0.05
+            num_homographies: 10       # samples per image for aggregation
+            max_angle: 0.05             # in radians (~10°)
+            translate: 0.05              # relative to image size
+            scale: [0.03, 0.05]
+            perspective: 0.005
             allow_artifacts: false
     warped_pair:
         enable: true
         params:
             translation: true
-            rotation: false
-            scaling: false
-            perspective: false
-            scaling_amplitude: 0.05  # reduced for gentler warp
-            perspective_amplitude_x: 0.03  # reduced for gentler warp
-            perspective_amplitude_y: 0.03  # reduced for gentler warp
-            patch_ratio: 0.9  # wider valid area
-            max_angle: 0.3  # ~17 degrees
+            rotation: true
+            scaling: true
+            perspective: true
+            scaling_amplitude: 0.005  # reduced for gentler warp
+            perspective_amplitude_x: 0.005  # reduced for gentler warp
+            perspective_amplitude_y: 0.005  # reduced for gentler warp
+            patch_ratio: 0.3  # wider valid area
+            max_angle: 0.1  # ~17 degrees
             allow_artifacts: false
         valid_border_margin: 3
 
@@ -78,8 +78,8 @@ model:
     sparse_loss:
         enable: true
         params:
-            num_matching_attempts: 1000
-            num_masked_non_matches_per_match: 100
+            num_matching_attempts: 100
+            num_masked_non_matches_per_match: 10
             lamda_d: 1
             dist: 'cos'
             method: '2d'
@@ -89,11 +89,11 @@ retrain: True
 reset_iter: True
 train_iter: 100 #170000
 validation_interval: 25 #2000
-tensorboard_interval: 400
+tensorboard_interval: 25
 save_interval: 25 #2000
 validation_size: 5
 truncate: 100
 
-pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_9000_checkpoint.pth.tar'
+pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_200_checkpoint.pth.tar'
     # pretrained: 'logs/superpoint_coco_heat2_0/checkpoints/superPointNet_90000_checkpoint.pth.tar'
 

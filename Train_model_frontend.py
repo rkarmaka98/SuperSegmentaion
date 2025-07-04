@@ -753,7 +753,10 @@ class Train_model_frontend(object):
         """
         for element in list(losses):
             # print ('add to tb: ', element)
-            print(task, "-", element, ": ", losses[element].item())
+            if element=='miou':
+                print(task, "-", element, ": ", losses[element])
+            else:
+                print(task, "-", element, ": ", losses[element].item())
 
     def add2tensorboard_nms(self, img, labels_2D, semi, task="training", batch_size=1):
         """

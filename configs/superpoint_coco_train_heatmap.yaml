@@ -103,7 +103,7 @@ model:
 
 retrain: True # set true for new model
 reset_iter: True # set true to set the iteration number to 0
-train_iter: 100 # 170000
+train_iter: 200 # 170000
 validation_interval: 50 # 2000
 tensorboard_interval: 20 # 200
 save_interval: 50 # 2000
