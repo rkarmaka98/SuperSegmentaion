@@ -135,6 +135,12 @@ Predicted segmentation masks can also be exported by adding
 The segmentation head uses a lightweight ASPP decoder which provides
 better context while keeping the model small enough for mid-range GPUs.
 
+**Note**: Training with `batch_size=1` previously failed because the
+`BatchNorm2d` layers inside the ASPP module receive a 1x1 tensor after
+global pooling. Statistics become invalid and the network outputs NaNs.
+These layers now use `GroupNorm`, which works reliably even when the
+batch size is one.
+
 
 ## run the code
 - Notes:
