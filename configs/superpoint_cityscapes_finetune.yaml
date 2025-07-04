@@ -15,7 +15,7 @@ data:
         params:
             GaussianBlur: {sigma: 0.2}
     preprocessing:
-        resize: [240, 320] #[512, 1024]  # images are downsampled for training
+        resize: [256, 512] #[512, 1024]  # images are downsampled for training
     augmentation:
         photometric:
             enable: true
@@ -32,7 +32,13 @@ data:
                     kernel_size_range: [100, 150]
                 motion_blur: {max_kernel_size: 3}
         homographic:
-            enable: false  # not implemented
+            enable: true
+            num_homographies: 10       # samples per image for aggregation
+            max_angle: 0.05             # in radians (~10°)
+            translate: 0.05              # relative to image size
+            scale: [0.03, 0.05]
+            perspective: 0.005
+            allow_artifacts: false
     warped_pair:
         enable: true
         params:
@@ -40,12 +46,12 @@ data:
             rotation: true
             scaling: true
             perspective: true
-            scaling_amplitude: 0.05  # reduced for gentler warp
-            perspective_amplitude_x: 0.05  # reduced for gentler warp
-            perspective_amplitude_y: 0.05  # reduced for gentler warp
-            patch_ratio: 0.95  # wider valid area
-            max_angle: 0.3  # ~17 degrees
-            allow_artifacts: true
+            scaling_amplitude: 0.005  # reduced for gentler warp
+            perspective_amplitude_x: 0.005  # reduced for gentler warp
+            perspective_amplitude_y: 0.005  # reduced for gentler warp
+            patch_ratio: 0.3  # wider valid area
+            max_angle: 0.1  # ~17 degrees
+            allow_artifacts: false
         valid_border_margin: 3
 
 front_end_model: 'Train_model_heatmap'  # use heatmap detector
@@ -77,8 +83,8 @@ model:
     sparse_loss:
         enable: true
         params:
-            num_matching_attempts: 1000
-            num_masked_non_matches_per_match: 100
+            num_matching_attempts: 100
+            num_masked_non_matches_per_match: 10
             lamda_d: 1
             dist: 'cos'
             method: '2d'
@@ -86,13 +92,13 @@ model:
 
 retrain: True
 reset_iter: True
-train_iter: 150 #170000
-validation_interval: 50 #2000
-tensorboard_interval: 400
-save_interval: 100 #2000
+train_iter: 100 #170000
+validation_interval: 25 #2000
+tensorboard_interval: 25
+save_interval: 25 #2000
 validation_size: 5
 truncate: 100
 
-pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_100_checkpoint.pth.tar'
+pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_200_checkpoint.pth.tar'
     # pretrained: 'logs/superpoint_coco_heat2_0/checkpoints/superPointNet_90000_checkpoint.pth.tar'
 
