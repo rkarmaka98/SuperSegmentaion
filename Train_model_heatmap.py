@@ -17,6 +17,7 @@ import torch.utils.data
 import logging
 
 from utils.tools import dict_update
+from evaluation import overlay_mask  # for visualizing segmentation
 
 # from utils.utils import labels2Dto3D, flattenDetection, labels2Dto3D_flattened
 # from utils.utils import pltImshow, saveImg
@@ -246,6 +247,7 @@ class Train_model_heatmap(Train_model_frontend):
             # print("img: ", img.shape, ", img_warp: ", img_warp.shape)
             outs = self.net(img.to(self.device))
             semi, coarse_desc = outs["semi"], outs["desc"]
+            seg_pred = outs.get("segmentation")  # segmentation logits if present
             if if_warp:
                 outs_warp = self.net(img_warp.to(self.device))
                 semi_warp, coarse_desc_warp = outs_warp["semi"], outs_warp["desc"]
@@ -253,6 +255,7 @@ class Train_model_heatmap(Train_model_frontend):
             with torch.no_grad():
                 outs = self.net(img.to(self.device))
                 semi, coarse_desc = outs["semi"], outs["desc"]
+                seg_pred = outs.get("segmentation")  # segmentation logits if present
                 if if_warp:
                     outs_warp = self.net(img_warp.to(self.device))
                     semi_warp, coarse_desc_warp = outs_warp["semi"], outs_warp["desc"]
@@ -343,25 +346,28 @@ class Train_model_heatmap(Train_model_frontend):
             loss += lambda_loss * loss_desc
 
         seg_loss = torch.tensor(0.0, device=self.device)
-        if self.lambda_segmentation > 0 and sample.get("segmentation_mask") is not None:
-            if "segmentation" in outs:
-                seg_pred = outs["segmentation"]
-                # target mask provided as (H, W) long tensor
-                seg_target = sample["segmentation_mask"].long().to(self.device)
-                if seg_pred.shape[-2:] != seg_target.shape[-2:]:
-                    seg_pred = F.interpolate(
-                        seg_pred, size=seg_target.shape[-2:], mode="bilinear", align_corners=False
-                    )
+        if (
+            self.lambda_segmentation > 0
+            and seg_pred is not None
+            and sample.get("segmentation_mask") is not None
+        ):
+            # target mask provided as (H, W) long tensor
+            seg_target = sample["segmentation_mask"].long().to(self.device)
+            if seg_pred.shape[-2:] != seg_target.shape[-2:]:
+                seg_pred = F.interpolate(
+                    seg_pred,
+                    size=seg_target.shape[-2:],
+                    mode="bilinear",
+                    align_corners=False,
+                )
 
-                n_classes = seg_pred.shape[1]
-                # validate labels; see `num_segmentation_classes` config
-                assert seg_target.max() < n_classes and seg_target.min() >= 0, (
-                    f"Segmentation labels must be in [0, {n_classes-1}]"
-                )
-                seg_loss = F.cross_entropy(
-                    seg_pred, seg_target
-                )
-                loss += self.lambda_segmentation * seg_loss
+            n_classes = seg_pred.shape[1]
+            # validate labels; see `num_segmentation_classes` config
+            assert seg_target.max() < n_classes and seg_target.min() >= 0, (
+                f"Segmentation labels must be in [0, {n_classes-1}]"
+            )
+            seg_loss = F.cross_entropy(seg_pred, seg_target)
+            loss += self.lambda_segmentation * seg_loss
 
         ##### try to minimize the error ######
         add_res_loss = False
@@ -498,6 +504,24 @@ class Train_model_heatmap(Train_model_frontend):
                         img_warp,
                         "warped_heatmap",
                     )
+
+            # visualize segmentation results if available
+            if seg_pred is not None:
+                pred_mask = seg_pred.argmax(dim=1)
+                overlays = []
+                for i in range(pred_mask.shape[0]):
+                    base_img = toNumpy(img[i].permute(1, 2, 0))
+                    overlay = overlay_mask(
+                        base_img,
+                        toNumpy(pred_mask[i]),
+                        num_classes=
+                            self.num_segmentation_classes
+                            or seg_pred.shape[1],
+                    )
+                    overlays.append(
+                        overlay.transpose(2, 0, 1).astype(np.float32) / 255.0
+                    )
+                self.images_dict["seg_overlay"] = np.stack(overlays, axis=0)
             # residuals
             from utils.losses import do_log
 
