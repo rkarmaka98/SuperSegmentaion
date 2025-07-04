@@ -17,6 +17,7 @@ import torch.utils.data
 import logging
 
 from utils.tools import dict_update
+from evaluation import compute_miou  # mIoU computation utility
 
 # from utils.utils import labels2Dto3D, flattenDetection, labels2Dto3D_flattened
 # from utils.utils import pltImshow, saveImg
@@ -61,7 +62,11 @@ class Train_model_heatmap(Train_model_frontend):
         "train_iter": 170000,
         "save_interval": 2000,
         "tensorboard_interval": 200,
-        "model": {"subpixel": {"enable": False}},
+        # model settings with default segmentation metric disabled
+        "model": {
+            "subpixel": {"enable": False},
+            "compute_miou": False,
+        },
         "data": {"gaussian_label": {"enable": False}},
     }
 
@@ -83,6 +88,8 @@ class Train_model_heatmap(Train_model_frontend):
         self.subpixel = False
         self.lambda_segmentation = self.config["model"].get("lambda_segmentation", 1.0)
         self.num_segmentation_classes = self.config["model"].get("num_segmentation_classes", 0)
+        # optional computation of segmentation mIoU per batch
+        self.compute_miou = self.config["model"].get("compute_miou", False)
 
         self.max_iter = config["train_iter"]
 
@@ -362,6 +369,17 @@ class Train_model_heatmap(Train_model_frontend):
                     seg_pred, seg_target
                 )
                 loss += self.lambda_segmentation * seg_loss
+
+                # compute batch mean IoU when enabled
+                if self.compute_miou:
+                    with torch.no_grad():
+                        pred_labels = seg_pred.argmax(dim=1)
+                        miou_scores = [
+                            compute_miou(p.cpu().numpy(), t.cpu().numpy(), num_classes=n_classes)
+                            for p, t in zip(pred_labels, seg_target)
+                        ]
+                        miou_batch = float(np.mean(miou_scores)) if miou_scores else 0.0
+                    self.scalar_dict["miou"] = miou_batch
 
         ##### try to minimize the error ######
         add_res_loss = False
