@@ -344,8 +344,10 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
     coor_cells = coor_cells.contiguous()
 
     src_pixel_coords = warp_points(coor_cells.view([-1, 2]), mat_homo_inv, device)
-    src_pixel_coords = src_pixel_coords.view([Batch, H, W, 2])
-    src_pixel_coords = src_pixel_coords.float()
+    src_pixel_coords = src_pixel_coords.view([Batch, H, W, 2]).float()
+    # normalize pixel coordinates to [-1, 1] for grid_sample
+    norm = torch.tensor([W - 1, H - 1], dtype=src_pixel_coords.dtype, device=device)
+    src_pixel_coords = src_pixel_coords / norm * 2 - 1
 
     warped_img = F.grid_sample(img, src_pixel_coords, mode=mode, align_corners=True)
     return warped_img
