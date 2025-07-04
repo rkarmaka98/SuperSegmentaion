@@ -182,7 +182,9 @@ class Train_model_frontend(object):
         print("adam optimizer")
         import torch.optim as optim
 
-        optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.9, 0.999))
+        # only optimize parameters that require gradients (allows freezing)
+        params = filter(lambda p: p.requires_grad, net.parameters())
+        optimizer = optim.Adam(params, lr=lr, betas=(0.9, 0.999))
         return optimizer
 
     def loadModel(self):
@@ -197,22 +199,30 @@ class Train_model_frontend(object):
             params["num_classes"] = self.num_segmentation_classes
         print("model: ", model)
         net = modelLoader(model=model, **params).to(self.device)
-        logging.info("=> setting adam solver")
-        optimizer = self.adamOptim(net, lr=self.config["model"]["learning_rate"])
 
         n_iter = 0
-        ## new model or load pretrained
-        if self.config["retrain"] == True:
+        if self.config["retrain"]:
             logging.info("New model")
-            pass
         else:
             path = self.config["pretrained"]
-            mode = "" if path[-4:] == ".pth" else "full" # the suffix is '.pth' or 'tar.gz'
+            mode = "" if path[-4:] == ".pth" else "full"  # weights or full ckpt
             logging.info("load pretrained model from: %s", path)
-            net, optimizer, n_iter = pretrainedLoader(
-                net, optimizer, n_iter, path, mode=mode, full_path=True
+            # temporary optimizer for checkpoint loading
+            tmp_opt = self.adamOptim(net, lr=self.config["model"]["learning_rate"])
+            net, tmp_opt, n_iter = pretrainedLoader(
+                net, tmp_opt, n_iter, path, mode=mode, full_path=True
             )
             logging.info("successfully load pretrained model from: %s", path)
+
+        # freeze detector/descriptor when finetuning segmentation only
+        if self.config["model"].get("freeze_backbone", False):
+            for name, param in net.named_parameters():
+                if name.startswith("seg_aspp") or name.startswith("seg_head"):
+                    continue
+                param.requires_grad = False
+
+        logging.info("=> setting adam solver")
+        optimizer = self.adamOptim(net, lr=self.config["model"]["learning_rate"])
 
         def setIter(n_iter):
             if self.config["reset_iter"]:

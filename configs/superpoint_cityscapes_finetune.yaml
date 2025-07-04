@@ -75,6 +75,7 @@ model:
     num_segmentation_classes: 4
     compute_miou: true  # log mIoU for each batch
     nms: 3
+    freeze_backbone: true  # freeze detector and descriptor layers
     dense_loss:
         enable: false
         params:
