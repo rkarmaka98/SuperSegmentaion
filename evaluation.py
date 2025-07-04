@@ -195,9 +195,13 @@ def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None, cla
     """
     color_mask = colorize_mask(mask, num_classes, class_colors)
 
-    # Ensure the base image has three channels
-    if image.ndim == 2 or image.shape[-1] == 1:
-        img_color = np.repeat(image[..., np.newaxis], 3, axis=2)
+    # Ensure the base image has three channels without changing its dimensions
+    if image.ndim == 2:
+        # (H, W) -> (H, W, 3)
+        img_color = np.repeat(image[:, :, np.newaxis], 3, axis=2)
+    elif image.shape[-1] == 1:
+        # (H, W, 1) -> (H, W, 3)
+        img_color = np.repeat(image, 3, axis=2)
     else:
         img_color = image
 
