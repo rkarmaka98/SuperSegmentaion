@@ -9,7 +9,7 @@ data:
     root: 'datasets/Cityscapes'      # path to Cityscapes images
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
     preprocessing:
-        resize: [512, 1024] #[512, 1024]
+        resize: [240, 320] #[512, 1024]
     reduce_to_4_categories: true
     # generate a warped image pair similar to the training setup
     warped_pair:
