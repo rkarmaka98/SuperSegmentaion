@@ -17,6 +17,7 @@ import torch.utils.data
 import logging
 
 from utils.tools import dict_update
+from evaluation import compute_miou  # mIoU computation utility
 
 # from utils.utils import labels2Dto3D, flattenDetection, labels2Dto3D_flattened
 # from utils.utils import pltImshow, saveImg
@@ -61,7 +62,11 @@ class Train_model_heatmap(Train_model_frontend):
         "train_iter": 170000,
         "save_interval": 2000,
         "tensorboard_interval": 200,
-        "model": {"subpixel": {"enable": False}},
+        # model settings with default segmentation metric disabled
+        "model": {
+            "subpixel": {"enable": False},
+            "compute_miou": False,
+        },
         "data": {"gaussian_label": {"enable": False}},
     }
 
@@ -83,6 +88,8 @@ class Train_model_heatmap(Train_model_frontend):
         self.subpixel = False
         self.lambda_segmentation = self.config["model"].get("lambda_segmentation", 1.0)
         self.num_segmentation_classes = self.config["model"].get("num_segmentation_classes", 0)
+        # optional computation of segmentation mIoU per batch
+        self.compute_miou = self.config["model"].get("compute_miou", False)
 
         self.max_iter = config["train_iter"]
 
@@ -196,10 +203,11 @@ class Train_model_heatmap(Train_model_frontend):
 
         has_kpt_labels = labels_2D is not None
 
+        # enable warping when the dataset provides a warped pair. Some datasets
+        # use the key 'warped_image' instead of 'warped_img'.
         if_warp = (
             self.config['data']['warped_pair']['enable']
-            and has_kpt_labels
-            and 'warped_img' in sample
+            and ('warped_img' in sample or 'warped_image' in sample)
         )
 
         # provide default mask if dataset doesn't supply one
@@ -220,7 +228,7 @@ class Train_model_heatmap(Train_model_frontend):
         #     sample['warped_labels'].to(self.device), \
         #     sample['warped_valid_mask'].to(self.device)
         if if_warp:
-            img_warp = sample["warped_img"]
+            img_warp = sample.get("warped_img", sample.get("warped_image"))
             labels_warp_2D = sample.get("warped_labels")
             mask_warp_2D = sample.get("warped_valid_mask", mask_2D)
 
@@ -229,7 +237,13 @@ class Train_model_heatmap(Train_model_frontend):
         # sample['homographies'].to(self.device), sample['inv_homographies'].to(self.device)
         if if_warp:
             mat_H = sample.get("homographies")
+            if mat_H is None:
+                mat_H = sample.get("homography")
+                if mat_H is not None:
+                    mat_H = mat_H.unsqueeze(0)
             mat_H_inv = sample.get("inv_homographies")
+            if mat_H_inv is None and mat_H is not None:
+                mat_H_inv = torch.inverse(mat_H)
 
         # zero the parameter gradients
         self.optimizer.zero_grad()
@@ -355,6 +369,17 @@ class Train_model_heatmap(Train_model_frontend):
                     seg_pred, seg_target
                 )
                 loss += self.lambda_segmentation * seg_loss
+
+                # compute batch mean IoU when enabled
+                if self.compute_miou:
+                    with torch.no_grad():
+                        pred_labels = seg_pred.argmax(dim=1)
+                        miou_scores = [
+                            compute_miou(p.cpu().numpy(), t.cpu().numpy(), num_classes=n_classes)
+                            for p, t in zip(pred_labels, seg_target)
+                        ]
+                        miou_batch = float(np.mean(miou_scores)) if miou_scores else 0.0
+                    self.scalar_dict["miou"] = miou_batch
 
         ##### try to minimize the error ######
         add_res_loss = False

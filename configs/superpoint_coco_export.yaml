@@ -1,0 +1,64 @@
+# Configuration for exporting SuperPoint predictions on the COCO dataset
+# This loads a fine-tuned model and writes predictions for the "val" split
+
+data:
+    name: 'COCO'
+    dataset: 'CocoPanoptic'          # use CocoPanoptic loader
+    export_folder: 'val'             # choose split
+    # enable panoptic masks in the loader
+    load_panoptic: true
+    use_cs34_masks: true             # grayscale CS-34 masks
+    num_segmentation_classes: 34
+    preprocessing:
+        resize: [240, 320]
+    # generate a warped image pair similar to the training setup
+    warped_pair:
+        enable: true
+        params:
+            translation: true
+            rotation: true
+            scaling: true
+            perspective: true
+            scaling_amplitude: 0.05  # reduced for gentler warp
+            perspective_amplitude_x: 0.05  # reduced for gentler warp
+            perspective_amplitude_y: 0.05  # reduced for gentler warp
+            patch_ratio: 0.95  # wider valid area
+            max_angle: 0.3  # ~17 degrees
+            allow_artifacts: true
+        valid_border_margin: 3
+
+training:
+    workers_test: 16
+
+# model used for exporting
+front_end_model: 'Val_model_heatmap'
+
+model:
+    name: 'SuperPointNet_gauss2'
+    params: {}
+    lambda_segmentation: 1.0       # weight for segmentation head
+    num_segmentation_classes: 34
+
+    detection_threshold: 0.015
+
+    batch_size: 1
+    eval_batch_size: 1
+    # output parameters
+    learning_rate: 0.001
+    detection_threshold: 0.015
+    nms: 4
+    top_k: 1000
+    nn_thresh: 1.0
+    homography_adaptation:
+        num: 0
+    subpixel:
+        enable: true
+        patch_size: 5
+    rand_noise:
+        enable: false
+        sigma: 0.2
+    # Path to the fine-tuned checkpoint to load before export
+    pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_9000_checkpoint.pth.tar'
+
+# evaluate only once
+eval_iter: 100

@@ -15,24 +15,27 @@ import numpy as np
 class ASPP(nn.Module):
     def __init__(self, in_ch, out_ch, dilations=(1, 6, 12, 18)):
         super().__init__()
+        # Use GroupNorm to avoid issues with small batch sizes
         self.blocks = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(in_ch, out_ch, 3, padding=d, dilation=d, bias=False),
-                nn.BatchNorm2d(out_ch),
+                nn.GroupNorm(32, out_ch),
                 nn.ReLU(inplace=True),
             )
             for d in dilations
         ])
+        # GroupNorm is also used after global pooling
         self.global_pool = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_ch, out_ch, 1, bias=False),
-            nn.BatchNorm2d(out_ch),
+            nn.GroupNorm(32, out_ch),
             nn.ReLU(inplace=True),
         )
         conv_in = out_ch * (len(dilations) + 1)
+        # Final projection uses GroupNorm
         self.project = nn.Sequential(
             nn.Conv2d(conv_in, out_ch, 1, bias=False),
-            nn.BatchNorm2d(out_ch),
+            nn.GroupNorm(32, out_ch),
             nn.ReLU(inplace=True),
         )
 

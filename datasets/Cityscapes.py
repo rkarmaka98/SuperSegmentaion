@@ -7,7 +7,7 @@ import torch.utils.data as data
 
 # for generating warped pairs
 from utils.homographies import sample_homography_np
-from utils.utils import inv_warp_image
+from utils.utils import inv_warp_image, compute_valid_mask
 
 from settings import DATA_PATH
 from utils.tools import dict_update
@@ -40,7 +40,7 @@ class Cityscapes(data.Dataset):
         'reduce_to_4_categories': False,
         'cache_in_memory': False,
         'validation_size': 100,
-        'truncate': None,
+        'truncate': 0,
         'load_segmentation': True,
         'preprocessing': {
             'resize': [256, 512]
@@ -119,18 +119,34 @@ class Cityscapes(data.Dataset):
             # semantic segmentation mask with dtype long and shape (H, W)
             output['segmentation_mask'] = seg_mask
 
-        # optionally generate a warped pair and the corresponding homography
+        # optionally generate a warped pair and provide fields compatible with
+        # the training pipeline
         if self.config.get('warped_pair', {}).get('enable', False):
             H, W = image_tensor.shape[-2:]
             # sample homography mapping warped image to original
             homo_inv = sample_homography_np(
-                np.array([H, W]), shift=-1, **self.config['warped_pair'].get('params', {})
+                np.array([H, W]), shift=-1,
+                **self.config['warped_pair'].get('params', {})
             )
             # invert to obtain transformation from original to warped
             homography = np.linalg.inv(homo_inv)
             # warp original image using the inverse matrix
-            warped = inv_warp_image(image_tensor.squeeze(0), torch.tensor(homo_inv, dtype=torch.float32))
+            warped = inv_warp_image(
+                image_tensor.squeeze(0),
+                torch.tensor(homo_inv, dtype=torch.float32),
+            )
+            # store both naming conventions for compatibility
             output['warped_image'] = warped.unsqueeze(0)
-            output['homography'] = torch.tensor(homography, dtype=torch.float32)
+            output['warped_img'] = output['warped_image']
+            # homographies in both directions for descriptor loss
+            H_mat = torch.tensor(homography, dtype=torch.float32)
+            H_inv_mat = torch.tensor(homo_inv, dtype=torch.float32)
+            output['homography'] = H_mat
+            output['homographies'] = H_mat.unsqueeze(0)
+            output['inv_homographies'] = H_inv_mat.unsqueeze(0)
+            # valid mask used when computing descriptor loss
+            margin = self.config['warped_pair'].get('valid_border_margin', 0)
+            valid_mask = compute_valid_mask(torch.tensor([H, W]), H_inv_mat, erosion_radius=margin)
+            output['warped_valid_mask'] = valid_mask
 
         return output
