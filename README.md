@@ -149,6 +149,7 @@ batch size is one.
     - Currently Support training on 'COCO' dataset (original paper), 'KITTI' dataset.
 - Tensorboard:
     - log files is saved under 'runs/<\export_task>/...'
+    - `seg_overlay` shows predicted segmentation masks blended with the input image
     
 `tensorboard --logdir=./runs/ [--host | static_ip_address] [--port | 6008]`
 
