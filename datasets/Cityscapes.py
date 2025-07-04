@@ -5,6 +5,12 @@ import numpy as np
 import torch
 import torch.utils.data as data
 
+# for generating warped pairs
+from utils.homographies import sample_homography_np
+from utils.utils import inv_warp_image, compute_valid_mask
+from datasets.data_tools import warpLabels, np_to_tensor
+from utils.var_dim import squeezeToNumpy
+
 from settings import DATA_PATH
 from utils.tools import dict_update
 
@@ -42,6 +48,17 @@ class Cityscapes(data.Dataset):
             'resize': [256, 512]
         },
         'num_parallel_calls': 10,
+        # optional random homography generation for descriptor export
+        'warped_pair': {
+            'enable': False,
+            'params': {},
+            'valid_border_margin': 0,
+        },
+        # gaussian heatmap generation for keypoints
+        'gaussian_label': {
+            'enable': False,
+            'params': {},
+        },
     }
 
     def __init__(self, transform=None, task='train', **config):
@@ -49,6 +66,14 @@ class Cityscapes(data.Dataset):
         self.config = dict_update(self.default_config, config)
         self.transforms = transform
         self.split = 'train' if task == 'train' else 'val'
+
+        # enable keypoint labels when path provided
+        self.labels = False
+        if self.config.get('labels'):
+            self.labels = True
+
+        # gaussian heatmap flag
+        self.gaussian_label = self.config.get('gaussian_label', {}).get('enable', False)
 
         # root directory with leftImg8bit/ and gtFine/ folders
         self.root = Path(self.config.get('root', Path(DATA_PATH, 'Cityscapes')))
@@ -65,7 +90,11 @@ class Cityscapes(data.Dataset):
             name = img_path.stem.replace('_leftImg8bit', '')
             mask_name = img_path.stem.replace('_leftImg8bit', '_gtFine_labelIds.png')
             mask_path = self.mask_root / rel.parent / mask_name
-            self.samples.append({'image': str(img_path), 'mask': str(mask_path), 'name': name})
+            sample = {'image': str(img_path), 'mask': str(mask_path), 'name': name}
+            if self.labels:
+                label_path = Path(self.config['labels'], self.split, f"{name}.npz")
+                sample['points'] = str(label_path)
+            self.samples.append(sample)
 
         self.sizer = self.config['preprocessing']['resize']
 
@@ -81,6 +110,19 @@ class Cityscapes(data.Dataset):
         image_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
 
         output = {'image': image_tensor, 'name': sample['name']}
+
+        H, W = image_tensor.shape[-2:]
+
+        # load keypoint labels if available
+        pnts = None
+        if self.labels:
+            pnts = np.load(sample['points'])['pts']
+            labels = self.points_to_2D(pnts, H, W)
+            output['labels_2D'] = torch.tensor(labels, dtype=torch.float32).unsqueeze(0)
+            output['labels_res'] = torch.zeros((2, H, W), dtype=torch.float32)
+            if self.gaussian_label:
+                labels_gaussian = self.gaussian_blur(squeezeToNumpy(output['labels_2D']))
+                output['labels_2D_gaussian'] = np_to_tensor(labels_gaussian, H, W)
 
         if self.config.get('load_segmentation', False):
             mask_path = Path(sample['mask'])
@@ -110,4 +152,63 @@ class Cityscapes(data.Dataset):
             # semantic segmentation mask with dtype long and shape (H, W)
             output['segmentation_mask'] = seg_mask
 
+        # optionally generate a warped pair and provide fields compatible with
+        # the training pipeline
+        if self.config.get('warped_pair', {}).get('enable', False):
+            H, W = image_tensor.shape[-2:]
+            # sample homography mapping warped image to original
+            homo_inv = sample_homography_np(
+                np.array([H, W]), shift=-1,
+                **self.config['warped_pair'].get('params', {})
+            )
+            # invert to obtain transformation from original to warped
+            homography = np.linalg.inv(homo_inv)
+            # warp original image using the inverse matrix
+            warped = inv_warp_image(
+                image_tensor.squeeze(0),
+                torch.tensor(homo_inv, dtype=torch.float32),
+            )
+            # store both naming conventions for compatibility
+            output['warped_image'] = warped.unsqueeze(0)
+            output['warped_img'] = output['warped_image']
+            # homographies in both directions for descriptor loss
+            H_mat = torch.tensor(homography, dtype=torch.float32)
+            H_inv_mat = torch.tensor(homo_inv, dtype=torch.float32)
+            output['homography'] = H_mat
+            output['homographies'] = H_mat.unsqueeze(0)
+            output['inv_homographies'] = H_inv_mat.unsqueeze(0)
+            # valid mask used when computing descriptor loss
+            margin = self.config['warped_pair'].get('valid_border_margin', 0)
+            valid_mask = compute_valid_mask(torch.tensor([H, W]), H_inv_mat, erosion_radius=margin)
+            output['warped_valid_mask'] = valid_mask
+
+            # warp keypoint labels when available
+            if self.labels:
+                warped_set = warpLabels(pnts, H, W, torch.tensor(homography, dtype=torch.float32), bilinear=True)
+                output['warped_labels'] = warped_set['labels']
+                warped_res = warped_set['res'].transpose(1,2).transpose(0,1)
+                output['warped_res'] = warped_res
+                if self.gaussian_label:
+                    warped_labels_gaussian = self.gaussian_blur(squeezeToNumpy(warped_set['labels_bi']))
+                    output['warped_labels_gaussian'] = np_to_tensor(warped_labels_gaussian, H, W)
+                    output['warped_labels_bi'] = warped_set['labels_bi']
+
         return output
+
+    @staticmethod
+    def points_to_2D(pnts, H, W):
+        labels = np.zeros((H, W))
+        pnts = pnts.astype(int)
+        labels[pnts[:, 1], pnts[:, 0]] = 1
+        return labels
+
+    def gaussian_blur(self, image):
+        """Apply Gaussian blur augmentation to generate heatmaps."""
+        from utils.photometric import ImgAugTransform
+        aug_par = {'photometric': {}}
+        aug_par['photometric']['enable'] = True
+        aug_par['photometric']['params'] = self.config['gaussian_label']['params']
+        augmentation = ImgAugTransform(**aug_par)
+        image = image[:, :, np.newaxis]
+        heatmaps = augmentation(image)
+        return heatmaps.squeeze()

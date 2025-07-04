@@ -4,11 +4,16 @@
 data:
     dataset: 'Cityscapes'
     root: 'datasets/Cityscapes'  # path to Cityscapes images
+    labels: logs/magicpoint_synth_homoAdapt_coco/predictions
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
     cache_in_memory: false
     load_segmentation: true
     reduce_to_4_categories: true
     num_segmentation_classes: 4
+    gaussian_label:
+        enable: true
+        params:
+            GaussianBlur: {sigma: 0.2}
     preprocessing:
         resize: [240, 320] #[512, 1024]  # images are downsampled for training
     augmentation:
