@@ -2,7 +2,7 @@ data:
     dataset: 'Cityscapes'  # 'coco' 'hpatches'
     export_folder: 'train' # train, val
     preprocessing:
-        resize: [240, 320] 
+        resize: [480, 640] 
         # resize: [480, 640] 
     gaussian_label:
         enable: false # false
@@ -24,16 +24,16 @@ data:
                 rotation: true
                 scaling: true
                 perspective: true
-                scaling_amplitude: 0.2
-                perspective_amplitude_x: 0.2
-                perspective_amplitude_y: 0.2
-                allow_artifacts: true
-                patch_ratio: 0.85
+                scaling_amplitude: 0.1 #0.2
+                perspective_amplitude_x: 0.05 #0.2
+                perspective_amplitude_y: 0.05 #0.2
+                allow_artifacts: false #true
+                patch_ratio: 0.9 #0.85
 
 training:
-    workers_train: 16
-    workers_val: 16
-    workers_test: 16
+    workers_train: 8
+    workers_val: 8
+    workers_test: 8
 
 model:
     # name: 'SuperPointNet' # 'SuperPointNet_gauss2'
