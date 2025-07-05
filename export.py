@@ -240,7 +240,9 @@ def export_descriptor(config, output_dir, args):
         homography = sample.get("homography")
         if homography is not None:
             H, W = img_np.shape
-            homography = homography.to(device)
+            # DataLoader batches with size 1 produce a leading dimension.
+            # Remove it so warp_points returns (N, 2) and the mask is 1-D.
+            homography = homography.squeeze(0).to(device)
             uv_b, mask = filter_points(
                 # ensure warp computation happens on the same device
                 warp_points(uv_a.to(device), homography, device=device),
@@ -548,7 +550,8 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
         homography = sample.get("homography")
         if homography is not None:
             H, W = img_2D.shape
-            homography = homography.to(device)
+            # Remove potential batch dimension for consistent indexing.
+            homography = homography.squeeze(0).to(device)
             # warp keypoints with the provided homography
             uv_b, mask = filter_points(
                 # ensure warp computation happens on the same device
