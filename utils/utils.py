@@ -901,6 +901,18 @@ def getWriterPath(task='train', exper_name='', date=True):
         str_date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return prefix + task + '/' + exper_name + str_date_time
 
+# helper to create SummaryWriter at the desired path
+def create_writer(task='train', exper_name=''):
+    """Utility wrapper combining :func:`getWriterPath` and ``SummaryWriter``.
+
+    The writer logs to ``runs/<task>/<exper_name>_<date>`` similar to the
+    original code but centralizes the creation logic.
+    """
+    from torch.utils.tensorboard import SummaryWriter
+
+    writer_path = getWriterPath(task=task, exper_name=exper_name, date=True)
+    return SummaryWriter(writer_path)
+
 def crop_or_pad_choice(in_num_points, out_num_points, shuffle=False):
     # Adapted from https://github.com/haosulab/frustum_pointnet/blob/635c938f18b9ec1de2de717491fb217df84d2d93/fpointnet/data/datasets/utils.py
     """Crop or pad point cloud to a fixed number; return the indexes
