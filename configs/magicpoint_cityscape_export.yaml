@@ -44,6 +44,6 @@ model:
         enable: true
 
 # pretrained: 'logs/magicpoint_synth20/checkpoints/superPointNet_200000_checkpoint.pth.tar' # 'SuperPointNet'
-pretrained: 'logs/magicpoint_synth_t2/checkpoints/superPointNet_100000_checkpoint.pth.tar' # Newer version with 100k iterations
-
+# pretrained: 'logs/magicpoint_synth_t2/checkpoints/superPointNet_100000_checkpoint.pth.tar' # Newer version with 100k iterations
+pretrained: 'logs/magicpoint_synth/checkpoints/superPointNet_20000_checkpoint.pth.tar' # train with 20K iterations
 
