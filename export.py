@@ -239,6 +239,9 @@ def export_descriptor(config, output_dir, args):
         uv_a = torch.from_numpy(pts[:, :2]).float()
         homography = sample.get("homography")
         if homography is not None:
+            # dataloader wraps tensors with an extra batch dimension, remove it
+            if homography.ndim == 3:
+                homography = homography.squeeze(0)
             H, W = img_np.shape
             homography = homography.to(device)
             uv_b, mask = filter_points(
@@ -547,6 +550,9 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
         uv_a = torch.from_numpy(pts[:, :2]).float()
         homography = sample.get("homography")
         if homography is not None:
+            # remove potential batch dimension added by dataloader
+            if homography.ndim == 3:
+                homography = homography.squeeze(0)
             H, W = img_2D.shape
             homography = homography.to(device)
             # warp keypoints with the provided homography

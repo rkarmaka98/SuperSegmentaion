@@ -75,6 +75,11 @@ def draw_keypoints(img, corners, color=(0, 255, 0), radius=3, s=3):
         numpy [H, W]
     '''
     img = np.repeat(cv2.resize(img, None, fx=s, fy=s)[..., np.newaxis], 3, -1)
+
+    # Return early if no keypoints to draw
+    if corners is None or len(corners) == 0:
+        return img
+
     for c in np.stack(corners).T:
         # cv2.circle(img, tuple(s * np.flip(c, 0)), radius, color, thickness=-1)
         cv2.circle(img, tuple((s * c[:2]).astype(int)), radius, color, thickness=-1)
