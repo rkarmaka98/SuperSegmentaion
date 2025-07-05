@@ -19,16 +19,16 @@ data:
             rotation: true
             scaling: true
             perspective: true
-            scaling_amplitude: 0.1
-            perspective_amplitude_x: 0.03
-            perspective_amplitude_y: 0.03
+            scaling_amplitude: 0.01
+            perspective_amplitude_x: 0.005
+            perspective_amplitude_y: 0.005
             patch_ratio: 0.9
             allow_artifacts: false
         valid_border_margin: 3
 training:
-    workers_train: 16
-    workers_val:16
-    workers_test: 16
+    workers_train: 8
+    workers_val: 8
+    workers_test: 8
 
 # model used for exporting
 front_end_model: 'Val_model_heatmap'  # 'Train_model_frontend'
@@ -40,13 +40,13 @@ model:
     num_segmentation_classes: 4
 
     # learning_rate: 0.0001 # 0.0001
-    detection_threshold: 0.005 # 0.015
+    detection_threshold: 0.001 # 0.015
 
-    batch_size: 1
-    eval_batch_size: 1
+    batch_size: 8
+    eval_batch_size: 8
     # output parameters
     learning_rate: 0.001
-    detection_threshold: 0.015 # 0.001
+    detection_threshold: 0.001 # 0.001
     nms: 3
     top_k: 1000
     nn_thresh: 0.7 # 0.7
@@ -59,7 +59,7 @@ model:
         enable: false
         sigma: 0.2
     # Path to the fine-tuned checkpoint to load before export
-    pretrained: 'logs/superpoint_cityscapes/checkpoints/superPointNet_1000_checkpoint.pth.tar'
+    pretrained: 'logs/superpoint_cityscapes/checkpoints/superPointNet_100_checkpoint.pth.tar'
 
 # evaluate only once
 eval_iter: 50

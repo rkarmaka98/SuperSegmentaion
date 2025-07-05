@@ -34,8 +34,8 @@ data:
         homographic:
             enable: true
             num_homographies: 10       # samples per image for aggregation
-            max_angle: 0.05             # in radians (~10°)
-            translate: 0.05              # relative to image size
+            max_angle: 0.005             # in radians (~10°)
+            translate: 0.005              # relative to image size
             scale: [0.03, 0.05]
             perspective: 0.005
             allow_artifacts: false
@@ -49,16 +49,16 @@ data:
             scaling_amplitude: 0.005  # reduced for gentler warp
             perspective_amplitude_x: 0.005  # reduced for gentler warp
             perspective_amplitude_y: 0.005  # reduced for gentler warp
-            patch_ratio: 0.3  # wider valid area
+            patch_ratio: 0.9  # wider valid area
             max_angle: 0.1  # ~17 degrees
             allow_artifacts: false
         valid_border_margin: 3
 
 front_end_model: 'Train_model_heatmap'  # use heatmap detector
 training:
-    workers_train: 16
-    workers_val: 16
-    workers_test: 16
+    workers_train: 8
+    workers_val: 8
+    workers_test: 8
 
 model:
     name: 'SuperPointNet_gauss2'

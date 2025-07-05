@@ -161,42 +161,6 @@
             "console": "integratedTerminal",
             "stopOnEntry": true,
             "justMyCode": true
-            },
-            {
-            "name": "Export on Coco",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}\\export.py",
-            "args": [
-                "export_descriptor",
-                "configs/superpoint_coco_export.yaml",
-                "coco_export",
-                "--export-segmentation"
-            ],
-            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
-            "console": "integratedTerminal",
-            "stopOnEntry": true,
-            "justMyCode": true
-            },
-            {
-            "name": "Evaluating on Coco",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}\\evaluation.py",
-            "args": [
-                "logs/coco_export/predictions",
-                "--repeatibility",
-                "--homography",
-                "--plotMatching",
-                "--evaluate-segmentation",
-                "--outputImg",
-                "--category-file",
-                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_cs34_categories.json"
-            ],
-            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
-            "console": "integratedTerminal",
-            "stopOnEntry": true,
-            "justMyCode": true
             }
     ]
 

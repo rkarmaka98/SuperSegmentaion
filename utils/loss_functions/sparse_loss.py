@@ -178,6 +178,11 @@ def descriptor_loss_sparse(descriptors, descriptors_warped, homographies, mask_v
     # print ("pos mask sum: ", mask.sum())
     uv_a = uv_a[mask]
 
+    # stop early if warping left no valid matches
+    if uv_b_matches.shape[0] == 0:
+        zero = torch.tensor(0.0, device=device)
+        return zero, zero, zero
+
     # crop to the same length
     shuffle = True
     if not shuffle: print("shuffle: ", shuffle)
