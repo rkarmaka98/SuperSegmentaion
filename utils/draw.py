@@ -11,9 +11,9 @@ import logging
 from pathlib import Path
 
 import numpy as np
+# Removed unused TensorBoard writer import
 from tqdm import tqdm
 
-from torch.utils.tensorboard import SummaryWriter
 import cv2
 import matplotlib.pyplot as plt
 
