@@ -242,7 +242,8 @@ def export_descriptor(config, output_dir, args):
             H, W = img_np.shape
             homography = homography.to(device)
             uv_b, mask = filter_points(
-                warp_points(uv_a.to(device), homography),
+                # ensure warp computation happens on the same device
+                warp_points(uv_a.to(device), homography, device=device),
                 torch.tensor([W, H], device=device),
                 return_mask=True,
             )
@@ -550,7 +551,8 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
             homography = homography.to(device)
             # warp keypoints with the provided homography
             uv_b, mask = filter_points(
-                warp_points(uv_a.to(device), homography),
+                # ensure warp computation happens on the same device
+                warp_points(uv_a.to(device), homography, device=device),
                 torch.tensor([W, H], device=device),
                 return_mask=True,
             )
