@@ -135,6 +135,8 @@ When `homography_adaptation.enable` is used with
 `magicpoint_cityscape_export.yaml`, the loader outputs a batch of warped images
 along with `valid_mask`, `homographies` and `inv_homographies` for GPU-based
 homography adaptation export.
+Each sample now also contains a `scene_name` entry (the city identifier) so that
+the export script can organise predictions in subfolders like it does for KITTI.
 
 Predicted segmentation masks can also be exported by adding
 `--export-segmentation` to other export commands and evaluated using
