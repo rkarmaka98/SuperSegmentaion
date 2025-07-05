@@ -35,11 +35,14 @@ from utils.utils import (
     save_path_formatter,
 )
 from utils.utils import flattenDetection, create_writer
+
 from utils.loader import dataLoader, modelLoader, pretrainedLoader
 from utils.utils import inv_warp_image_batch
 from utils.utils import warp_points, filter_points
 import cv2
 from models.model_wrap import SuperPointFrontend_torch, PointTracker
+from utils.draw import draw_keypoints
+from evaluation import overlay_mask, compute_miou
 
 ## parameters
 from settings import EXPER_PATH
@@ -205,6 +208,140 @@ def export_descriptor(config, output_dir, args):
             mask_np = squeezeToNumpy(sample["mask"])
             pred.update({"segmentation_mask": mask_np, "gt_mask": mask_np})
 
+        # ----- TensorBoard visualization -----
+        img_np = squeezeToNumpy(img_0)
+        img_pts = draw_keypoints(img_np * 255, pts.transpose())
+        writer.add_image(
+            "keypoints", torch.from_numpy(img_pts).permute(2, 0, 1) / 255.0, count
+        )
+
+        if pred_mask is not None:
+            overlay = overlay_mask(
+                img_np,
+                pred_mask,
+                num_classes=config["data"].get("num_segmentation_classes"),
+            )
+            writer.add_image(
+                "seg_overlay",
+                torch.from_numpy(overlay).permute(2, 0, 1) / 255.0,
+                count,
+            )
+            if "gt_mask" in pred:
+                miou = compute_miou(
+                    pred_mask,
+                    pred["gt_mask"],
+                    num_classes=config["data"].get("num_segmentation_classes"),
+                )
+                writer.add_scalar("mIoU", miou, count)
+
+        writer.add_scalar("num_points", pts.shape[0], count)
+
+        uv_a = torch.from_numpy(pts[:, :2]).float()
+        homography = sample.get("homography")
+        if homography is not None:
+            H, W = img_np.shape
+            homography = homography.to(device)
+            uv_b, mask = filter_points(
+                warp_points(uv_a.to(device), homography),
+                torch.tensor([W, H], device=device),
+                return_mask=True,
+            )
+            uv_a_valid = uv_a[mask.cpu()]
+
+            num_original = uv_a.shape[0]
+            num_valid = uv_b.shape[0]
+            padding_needed = max(num_original - num_valid, 0)
+            empty_flag = int(num_valid == 0)
+            det = float(torch.det(homography).cpu())
+
+            writer.add_scalar("keypoints/original", num_original, count)
+            writer.add_scalar("keypoints/warped_valid", num_valid, count)
+            writer.add_scalar("keypoints/padding_needed", padding_needed, count)
+            writer.add_scalar("keypoints/empty_match_flag", empty_flag, count)
+            writer.add_scalar("homography_det", det, count)
+
+            warped_img = sample.get("warped_image")
+            if warped_img is not None:
+                warped_img_np = warped_img.numpy().squeeze()
+            else:
+                warped_img_np = img_np
+
+            img_a_kp = draw_keypoints(img_np * 255, uv_a_valid.numpy())
+            img_b_kp = draw_keypoints(warped_img_np * 255, uv_b.cpu().numpy())
+            writer.add_image(
+                "input_img_with_kp",
+                torch.from_numpy(img_a_kp).permute(2, 0, 1) / 255.0,
+                count,
+            )
+            writer.add_image(
+                "warped_img_with_kp",
+                torch.from_numpy(img_b_kp).permute(2, 0, 1) / 255.0,
+                count,
+            )
+
+            def draw_corr(img_a, img_b, pts_a, pts_b):
+                h1, w1 = img_a.shape
+                h2, w2 = img_b.shape
+                canvas = np.zeros((max(h1, h2), w1 + w2, 3), dtype=np.uint8)
+                c1 = np.stack([img_a] * 3, -1)
+                c2 = np.stack([img_b] * 3, -1)
+                canvas[:h1, :w1] = c1
+                canvas[:h2, w1:w1 + w2] = c2
+                for pa, pb in zip(pts_a.astype(int), pts_b.astype(int)):
+                    pt1 = (int(pa[0]), int(pa[1]))
+                    pt2 = (int(pb[0]) + w1, int(pb[1]))
+                    cv2.line(canvas, pt1, pt2, (0, 255, 0), 1)
+                return canvas
+
+            corr_img = draw_corr(
+                img_np * 255,
+                warped_img_np * 255,
+                uv_a_valid.numpy(),
+                uv_b.cpu().numpy(),
+            )
+            writer.add_image(
+                "correspondence_vectors",
+                torch.from_numpy(corr_img).permute(2, 0, 1) / 255.0,
+                count,
+            )
+
+            writer.add_text(
+                "homography_matrix",
+                np.array2string(homography.cpu().numpy()),
+                count,
+            )
+            writer.add_image(
+                "homography_heatmap",
+                torch.from_numpy(np.abs(homography.cpu().numpy())).unsqueeze(0),
+                count,
+            )
+
+            grid = np.zeros_like(img_np)
+            step = 20
+            for x in range(0, grid.shape[1], step):
+                grid[:, x] = 1
+            for y in range(0, grid.shape[0], step):
+                grid[y, :] = 1
+            grid_warp = cv2.warpPerspective(
+                grid.astype(np.float32),
+                homography.cpu().numpy(),
+                (grid.shape[1], grid.shape[0]),
+            )
+            writer.add_image(
+                "homography_grid_overlay",
+                torch.from_numpy(grid_warp).unsqueeze(0),
+                count,
+            )
+
+            mask_img = np.zeros_like(img_np)
+            for p in uv_b.cpu().round().long():
+                mask_img[p[1], p[0]] = 1
+            writer.add_image(
+                "filtered_mask", torch.from_numpy(mask_img).unsqueeze(0), count
+            )
+
+            if empty_flag:
+                writer.add_text("ERROR", "no valid matches", count)
 
         if outputMatches and has_warp:
             matches = tracker.get_matches()
@@ -221,6 +358,8 @@ def export_descriptor(config, output_dir, args):
         # print("save: ", path)
         count += 1
     print("output pairs: ", count)
+    # close tensorboard writer
+    writer.close()
 
 
 @torch.no_grad()

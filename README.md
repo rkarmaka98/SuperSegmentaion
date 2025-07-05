@@ -142,6 +142,10 @@ Exporting MagicPoint on Cityscapes now also writes TensorBoard summaries.
 Open TensorBoard in `runs/export_detector_homoAdapt/` to browse keypoint
 overlays, segmentation masks and the mIoU for each image.
 
+Exporting SuperPoint predictions using `export_descriptor` now produces the same
+TensorBoard logs under `runs/export_descriptor/` when `superpoint_cityscapes_export.yaml`
+is used.
+
 Predicted segmentation masks can also be exported by adding
 `--export-segmentation` to other export commands and evaluated using
 `evaluation.py --evaluate-segmentation`.
