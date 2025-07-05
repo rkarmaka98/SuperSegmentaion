@@ -1,5 +1,8 @@
-"""util functions for visualization
+"""Utility functions for visualization.
 
+This module gathers helpers for displaying keypoints, matches and images.  It
+also provides utilities to draw vector fields and homography grids onto images
+for easy debugging of geometric transformations.
 """
 
 import argparse
@@ -176,9 +179,85 @@ def draw_matches_cv(data):
 def drawBox(points, img, offset=np.array([0,0]), color=(0,255,0)):
 #     print("origin", points)
     offset = offset[::-1]
-    points = points + offset    
+    points = points + offset
     points = points.astype(int)
     for i in range(len(points)):
         img = img + cv2.line(np.zeros_like(img),tuple(points[-1+i]), tuple(points[i]), color,5)
     return img
+
+
+def draw_vectors(img, pts_a, pts_b, color=(0, 255, 0)):
+    """Draw vectors from ``pts_a`` to ``pts_b`` on ``img``.
+
+    Parameters
+    ----------
+    img : ``numpy.ndarray``
+        Image of shape ``(H, W)`` or ``(H, W, 3)``.
+    pts_a : ``numpy.ndarray``
+        Array of starting points ``(N, 2)`` in ``(x, y)`` order.
+    pts_b : ``numpy.ndarray``
+        Array of end points ``(N, 2)`` matching ``pts_a``.
+    color : tuple, optional
+        BGR color used for drawing the vectors.
+
+    Returns
+    -------
+    ``numpy.ndarray``
+        Copy of ``img`` with the vectors drawn.
+    """
+
+    # Ensure image has three channels for colored drawing
+    if img.ndim == 2:
+        out = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    else:
+        out = img.copy()
+
+    for a, b in zip(np.asarray(pts_a), np.asarray(pts_b)):
+        a_pt = tuple(map(int, a))
+        b_pt = tuple(map(int, b))
+        # arrowedLine draws an arrow from a to b
+        cv2.arrowedLine(out, a_pt, b_pt, color, 1, tipLength=0.2)
+
+    return out
+
+
+def draw_homography_grid(img, H, spacing=32):
+    """Overlay a warped grid defined by homography ``H`` on ``img``.
+
+    Parameters
+    ----------
+    img : ``numpy.ndarray``
+        Base image ``(H, W)`` or ``(H, W, 3)``.
+    H : ``numpy.ndarray``
+        ``3x3`` homography matrix.
+    spacing : int, optional
+        Pixel spacing between grid lines before warping.
+
+    Returns
+    -------
+    ``numpy.ndarray``
+        The input image overlaid with the warped grid.
+    """
+
+    if img.ndim == 2:
+        color_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    else:
+        color_img = img.copy()
+
+    h, w = color_img.shape[:2]
+
+    # draw a regular grid on a blank image
+    grid = np.zeros_like(color_img)
+    for x in range(0, w, spacing):
+        cv2.line(grid, (x, 0), (x, h - 1), (0, 255, 0), 1)
+    for y in range(0, h, spacing):
+        cv2.line(grid, (0, y), (w - 1, y), (0, 255, 0), 1)
+
+    # warp the grid using the provided homography
+    warped_grid = cv2.warpPerspective(grid, H, (w, h))
+
+    # overlay warped grid on the original image
+    overlay = cv2.addWeighted(color_img, 1.0, warped_grid, 1.0, 0)
+
+    return overlay
 
