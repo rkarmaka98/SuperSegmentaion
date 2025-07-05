@@ -224,6 +224,7 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
     from utils.utils import pltImshow
     from utils.utils import saveImg
     from utils.draw import draw_keypoints
+    from evaluation import overlay_mask, compute_miou
 
     # basic setting
     task = config["data"]["dataset"]
@@ -370,6 +371,29 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
         elif "mask" in sample:
             pred.update({"segmentation_mask": np.squeeze(sample["mask"])})
 
+        # ----- TensorBoard visualization -----
+        # log image with predicted keypoints overlay
+        img_pts = draw_keypoints(img_2D * 255, pts.transpose())
+        writer.add_image(
+            "keypoints", torch.from_numpy(img_pts).permute(2, 0, 1) / 255.0, count
+        )
+
+        # log segmentation overlay and compute mIoU when available
+        if pred_mask is not None:
+            overlay = overlay_mask(
+                img_2D, pred_mask,
+                num_classes=config["data"].get("num_segmentation_classes")
+            )
+            writer.add_image(
+                "seg_overlay", torch.from_numpy(overlay).permute(2, 0, 1) / 255.0, count
+            )
+            if "gt_mask" in pred:
+                miou = compute_miou(pred_mask, pred["gt_mask"],
+                                   num_classes=config["data"].get("num_segmentation_classes"))
+                writer.add_scalar("mIoU", miou, count)
+        # number of detected points per image
+        writer.add_scalar("num_points", pts.shape[0], count)
+
         ## - make directories
         filename = str(name)
         # only KITTI-like datasets provide a scene_name for grouping outputs
@@ -394,6 +418,8 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
     with open(save_file, "a") as myfile:
         myfile.write("Homography adaptation: " + str(homoAdapt_iter) + "\n")
         myfile.write("output pairs: " + str(count) + "\n")
+    # close tensorboard writer
+    writer.close()
     pass
 
 

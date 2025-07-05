@@ -138,6 +138,10 @@ homography adaptation export.
 Each sample now also contains a `scene_name` entry (the city identifier) so that
 the export script can organise predictions in subfolders like it does for KITTI.
 
+Exporting MagicPoint on Cityscapes now also writes TensorBoard summaries.
+Open TensorBoard in `runs/export_detector_homoAdapt/` to browse keypoint
+overlays, segmentation masks and the mIoU for each image.
+
 Predicted segmentation masks can also be exported by adding
 `--export-segmentation` to other export commands and evaluated using
 `evaluation.py --evaluate-segmentation`.
