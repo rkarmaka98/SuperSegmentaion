@@ -90,7 +90,13 @@ class Cityscapes(data.Dataset):
             name = img_path.stem.replace('_leftImg8bit', '')
             mask_name = img_path.stem.replace('_leftImg8bit', '_gtFine_labelIds.png')
             mask_path = self.mask_root / rel.parent / mask_name
-            sample = {'image': str(img_path), 'mask': str(mask_path), 'name': name}
+            sample = {
+                'image': str(img_path),
+                'mask': str(mask_path),
+                'name': name,
+                # city identifier used as scene name for export
+                'scene_name': rel.parent.name,
+            }
             if self.labels:
                 label_path = Path(self.config['labels'], self.split, f"{name}.npz")
                 sample['points'] = str(label_path)
@@ -109,7 +115,12 @@ class Cityscapes(data.Dataset):
         img = img.astype(np.float32) / 255.0
         image_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
 
-        output = {'image': image_tensor, 'name': sample['name']}
+        output = {
+            'image': image_tensor,
+            'name': sample['name'],
+            # scene identifier required by some export scripts
+            'scene_name': sample['scene_name'],
+        }
 
         H, W = image_tensor.shape[-2:]
 
