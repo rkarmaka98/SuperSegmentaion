@@ -16,9 +16,9 @@ data:
         enable: true
         params:
             translation: true
-            rotation: false
-            scaling: false
-            perspective: false
+            rotation: true
+            scaling: true
+            perspective: true
             scaling_amplitude: 0.1
             perspective_amplitude_x: 0.03
             perspective_amplitude_y: 0.03
@@ -26,6 +26,8 @@ data:
             allow_artifacts: false
         valid_border_margin: 3
 training:
+    workers_train: 16
+    workers_val:16
     workers_test: 16
 
 # model used for exporting
