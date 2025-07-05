@@ -164,7 +164,9 @@ batch size is one.
 - Tensorboard:
     - log files is saved under 'runs/<\export_task>/...'
     - `seg_overlay` shows predicted segmentation masks blended with the input image
-    
+    - new tags like `input_img_with_kp` or `homography_heatmap` help debugging
+      homography adaptation results from `export_detector_homoAdapt_gpu`
+
 `tensorboard --logdir=./runs/ [--host | static_ip_address] [--port | 6008]`
 
 ### 1) Training MagicPoint on Synthetic Shapes
