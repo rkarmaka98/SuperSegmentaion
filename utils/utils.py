@@ -283,23 +283,32 @@ def filter_points(points, shape, return_mask=False):
     return points [mask]
     # return points [torch.prod(mask, dim=-1) == 1]
 
-def warp_points(points, homographies, device='cpu'):
+def warp_points(points, homographies, device=None):
     """
     Warp a list of points with the given homography.
 
     Arguments:
         points: list of N points, shape (N, 2(x, y))).
         homography: batched or not (shapes (B, 3, 3) and (...) respectively).
+        device: device to run the computation on. If ``None`` the device of
+            ``points`` is used by default.
 
-    Returns: a Tensor of shape (N, 2) or (B, N, 2(x, y)) (depending on whether the homography
-            is batched) containing the new coordinates of the warped points.
+    Returns: a Tensor of shape (N, 2) or (B, N, 2(x, y)) (depending on whether
+            the homography is batched) containing the new coordinates of the
+            warped points.
 
     """
+    # Determine device automatically if not provided. Using the same
+    # device as the input points avoids mixing CPU and GPU tensors.
+    if device is None:
+        device = points.device
+
     # expand points len to (x, y, 1)
     no_batches = len(homographies.shape) == 2
     homographies = homographies.unsqueeze(0) if no_batches else homographies
     # homographies = homographies.unsqueeze(0) if len(homographies.shape) == 2 else homographies
     batch_size = homographies.shape[0]
+    homographies = homographies.to(device)
     points = torch.cat((points.float(), torch.ones((points.shape[0], 1)).to(device)), dim=1)
     points = points.to(device)
     homographies = homographies.view(batch_size*3,3)
