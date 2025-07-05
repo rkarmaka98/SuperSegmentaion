@@ -67,6 +67,11 @@ data:
 
 front_end_model: 'Train_model_heatmap'  # 'Train_model_frontend'
 
+training:
+    workers_train: 16
+    workers_val:16
+    workers_test: 16
+
 model:
     name: 'SuperPointNet_gauss2'
     params: {
@@ -74,8 +79,8 @@ model:
     detector_loss:
         loss_type: 'softmax'
 
-    batch_size:  64 # 64
-    eval_batch_size: 16
+    batch_size:  8 # 64
+    eval_batch_size: 8
     learning_rate: 0.001
     kernel_reg: 0.
     detection_threshold: 0.001 # 1/65

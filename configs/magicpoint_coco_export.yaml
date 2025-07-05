@@ -28,7 +28,9 @@ data:
                 patch_ratio: 0.85
 
 training:
-    workers_test: 2
+    workers_train: 16
+    workers_val:16
+    workers_test: 16
 
 model:
     # name: 'SuperPointNet' # 'SuperPointNet_gauss2'
