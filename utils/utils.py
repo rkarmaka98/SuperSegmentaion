@@ -338,7 +338,7 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
         mat_homo_inv = mat_homo_inv.view(1,3,3)
 
     Batch, channel, H, W = img.shape
-    coor_cells = torch.stack(torch.meshgrid(torch.linspace(-1, 1, W), torch.linspace(-1, 1, H)), dim=2)
+    coor_cells = torch.stack(torch.meshgrid(torch.linspace(-1, 1, W), torch.linspace(-1, 1, H), indexing='ij'), dim=2)
     coor_cells = coor_cells.transpose(0, 1)
     coor_cells = coor_cells.to(device)
     coor_cells = coor_cells.contiguous()
@@ -776,7 +776,7 @@ def descriptor_loss(descriptors, descriptors_warped, homographies, mask_valid=No
         shape = torch.tensor([H, W]).type(torch.FloatTensor).to(device)
         # compute the center pixel of every cell in the image
 
-        coor_cells = torch.stack(torch.meshgrid(torch.arange(Hc), torch.arange(Wc)), dim=2)
+        coor_cells = torch.stack(torch.meshgrid(torch.arange(Hc), torch.arange(Wc), indexing='ij'), dim=2)
         coor_cells = coor_cells.type(torch.FloatTensor).to(device)
         coor_cells = coor_cells * cell_size + cell_size // 2
         ## coord_cells is now a grid containing the coordinates of the Hc x Wc

@@ -6,7 +6,7 @@ from utils.homographies import scale_homography_torch
 from utils.loss_functions.pixelwise_contrastive_loss import PixelwiseContrastiveLoss
 
 def get_coor_cells(Hc, Wc, cell_size, device='cpu', uv=False):
-    coor_cells = torch.stack(torch.meshgrid(torch.arange(Hc), torch.arange(Wc)), dim=2)
+    coor_cells = torch.stack(torch.meshgrid(torch.arange(Hc), torch.arange(Wc), indexing='ij'), dim=2)
     coor_cells = coor_cells.type(torch.FloatTensor).to(device)
     coor_cells = coor_cells.view(-1, 2)
     # change vu to uv
