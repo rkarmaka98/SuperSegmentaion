@@ -6,6 +6,9 @@ data:
     cache_in_memory: true
     suffix: 'v6'
     add_augmentation_to_test_set: false  # set to true to evaluate with noise
+    load_segmentation: false
+    reduce_to_4_categories: false
+    num_segmentation_classes: 0
     gaussian_label:
         enable: false
         params:
@@ -78,6 +81,9 @@ model:
     detection_threshold: 0.001 # 1/65
     nms: 4
     lambda_loss: 0 # disable descriptor loss
+    lambda_segmentation: 0 # disable segmentation loss
+    compute_miou: false
+    num_segmentation_classes: 0
     dense_loss:
         enable: false
         params:
