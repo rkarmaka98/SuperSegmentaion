@@ -17,7 +17,6 @@ from pathlib import Path
 import numpy as np
 from imageio import imread
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
 
 ## torch
 import torch
@@ -35,7 +34,7 @@ from utils.utils import (
     load_checkpoint,
     save_path_formatter,
 )
-from utils.utils import getWriterPath, flattenDetection
+from utils.utils import flattenDetection, create_writer
 from utils.loader import dataLoader, modelLoader, pretrainedLoader
 from utils.utils import inv_warp_image_batch
 from utils.utils import warp_points, filter_points
@@ -91,7 +90,8 @@ def export_descriptor(config, output_dir, args):
     logging.info("train on device: %s", device)
     with open(os.path.join(output_dir, "config.yml"), "w") as f:
         yaml.dump(config, f, default_flow_style=False)
-    writer = SummaryWriter(getWriterPath(task=args.command, date=True))
+    # centralize SummaryWriter creation through helper
+    writer = create_writer(task=args.command)
     save_path = get_save_path(output_dir)
     save_output = save_path / "../predictions"
     os.makedirs(save_output, exist_ok=True)
@@ -244,9 +244,8 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
     logging.info("train on device: %s", device)
     with open(os.path.join(output_dir, "config.yml"), "w") as f:
         yaml.dump(config, f, default_flow_style=False)
-    writer = SummaryWriter(
-        getWriterPath(task=args.command, exper_name=args.exper_name, date=True)
-    )
+    # use helper to create writer with experiment name
+    writer = create_writer(task=args.command, exper_name=args.exper_name)
 
     ## parameters
     nms_dist = config["model"]["nms"]  # 4
