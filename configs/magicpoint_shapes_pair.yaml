@@ -78,6 +78,8 @@ model:
     detection_threshold: 0.001 # 1/65
     nms: 4
     lambda_loss: 0 # disable descriptor loss
+    lambda_segmentation: 0 # disable segmentation loss
+    compute_miou: false
     dense_loss:
         enable: false
         params:
@@ -96,9 +98,9 @@ model:
 retrain: True # set true for new model
 reset_iter: True
 
-train_iter: 200000 # 200000
+train_iter: 100000 # 200000
 tensorboard_interval: 1000 # 200
-save_interval: 2000 # 2000
+save_interval: 1000 # 2000
 validation_interval: 1000 # one validation of entire val set every N training steps
 validation_size: 10
 train_show_interval: 1000 # one show of the current training from to Tensorboard every N training steps
