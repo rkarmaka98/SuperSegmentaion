@@ -10,6 +10,9 @@ data:
     augmentation:
         photometric:
             enable: false
+        homographic:
+            enable: false
+            valid_border_margin: 3
     homography_adaptation:
         enable: true
         num: 100 # 100

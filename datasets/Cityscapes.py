@@ -7,7 +7,8 @@ import torch.utils.data as data
 
 # for generating warped pairs
 from utils.homographies import sample_homography_np
-from utils.utils import inv_warp_image, compute_valid_mask
+# utils for warping and computing valid masks
+from utils.utils import inv_warp_image, compute_valid_mask, inv_warp_image_batch
 from datasets.data_tools import warpLabels, np_to_tensor
 from utils.var_dim import squeezeToNumpy
 
@@ -48,11 +49,29 @@ class Cityscapes(data.Dataset):
             'resize': [256, 512]
         },
         'num_parallel_calls': 10,
+        # optional data augmentation similar to the COCO loader
+        'augmentation': {
+            'photometric': {
+                'enable': False,
+                'primitives': 'all',
+                'params': {},
+                'random_order': True,
+            },
+            'homographic': {
+                'enable': False,
+                'params': {},
+                'valid_border_margin': 0,
+            },
+        },
         # optional random homography generation for descriptor export
         'warped_pair': {
             'enable': False,
             'params': {},
             'valid_border_margin': 0,
+        },
+        # enable homography adaptation at export time
+        'homography_adaptation': {
+            'enable': False
         },
         # gaussian heatmap generation for keypoints
         'gaussian_label': {
@@ -90,13 +109,22 @@ class Cityscapes(data.Dataset):
             name = img_path.stem.replace('_leftImg8bit', '')
             mask_name = img_path.stem.replace('_leftImg8bit', '_gtFine_labelIds.png')
             mask_path = self.mask_root / rel.parent / mask_name
-            sample = {'image': str(img_path), 'mask': str(mask_path), 'name': name}
+            sample = {
+                'image': str(img_path),
+                'mask': str(mask_path),
+                'name': name,
+                # city identifier used as scene name for export
+                'scene_name': rel.parent.name,
+            }
             if self.labels:
                 label_path = Path(self.config['labels'], self.split, f"{name}.npz")
                 sample['points'] = str(label_path)
             self.samples.append(sample)
 
         self.sizer = self.config['preprocessing']['resize']
+
+        # expose utils as attributes for easier access in __getitem__
+        self.inv_warp_image_batch = inv_warp_image_batch
 
     def __len__(self):
         return len(self.samples)
@@ -109,9 +137,18 @@ class Cityscapes(data.Dataset):
         img = img.astype(np.float32) / 255.0
         image_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
 
-        output = {'image': image_tensor, 'name': sample['name']}
+        output = {
+            'image': image_tensor,
+            'name': sample['name'],
+            # scene identifier required by some export scripts
+            'scene_name': sample['scene_name'],
+        }
 
         H, W = image_tensor.shape[-2:]
+
+        # always provide a valid mask for the current image
+        valid_mask = compute_valid_mask(torch.tensor([H, W]), torch.eye(3))
+        output['valid_mask'] = valid_mask
 
         # load keypoint labels if available
         pnts = None
@@ -151,6 +188,47 @@ class Cityscapes(data.Dataset):
 
             # semantic segmentation mask with dtype long and shape (H, W)
             output['segmentation_mask'] = seg_mask
+
+        # homography adaptation to generate multiple warped views
+        if self.config.get('homography_adaptation', {}).get('enable', False):
+            homoAdapt_iter = self.config['homography_adaptation']['num']
+            homographies = np.stack([
+                sample_homography_np(
+                    np.array([H, W]), shift=-1,
+                    **self.config['homography_adaptation']['homographies']['params']
+                )
+                for _ in range(homoAdapt_iter)
+            ])
+            # use inverse homographies as defined by the loader
+            homographies = np.stack([np.linalg.inv(h) for h in homographies])
+            homographies[0, :, :] = np.identity(3)
+            homographies = torch.tensor(homographies, dtype=torch.float32)
+            inv_homographies = torch.stack([
+                torch.inverse(homographies[i]) for i in range(homoAdapt_iter)
+            ])
+
+            # warp original image for each homography
+            warped_img = self.inv_warp_image_batch(
+                image_tensor.squeeze().repeat(homoAdapt_iter, 1, 1, 1),
+                inv_homographies,
+                mode='bilinear'
+            ).unsqueeze(0).squeeze()
+
+            valid_mask = compute_valid_mask(
+                torch.tensor([H, W]),
+                inv_homography=inv_homographies,
+                erosion_radius=self.config['augmentation']['homographic'][
+                    'valid_border_margin']
+            )
+            output.update({
+                'image': warped_img,
+                'image_2D': image_tensor,
+                'valid_mask': valid_mask,
+            })
+            output.update({
+                'homographies': homographies,
+                'inv_homographies': inv_homographies,
+            })
 
         # optionally generate a warped pair and provide fields compatible with
         # the training pipeline

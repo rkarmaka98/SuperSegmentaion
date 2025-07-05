@@ -380,7 +380,8 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
 
         ## - make directories
         filename = str(name)
-        if task == "Kitti" or "Kitti_inh":
+        # only KITTI-like datasets provide a scene_name for grouping outputs
+        if task in ("Kitti", "Kitti_inh"):
             scene_name = sample["scene_name"][0]
             os.makedirs(Path(save_output, scene_name), exist_ok=True)
 
