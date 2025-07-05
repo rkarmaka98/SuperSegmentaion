@@ -75,6 +75,9 @@ def draw_keypoints(img, corners, color=(0, 255, 0), radius=3, s=3):
         numpy [H, W]
     '''
     img = np.repeat(cv2.resize(img, None, fx=s, fy=s)[..., np.newaxis], 3, -1)
+    # Return early if no keypoints to draw
+    if corners is None or len(corners) == 0:
+        return img
 
     # handle both [N, 2] and [2, N] shaped corner arrays
     corners = np.array(corners)
@@ -91,6 +94,7 @@ def draw_keypoints(img, corners, color=(0, 255, 0), radius=3, s=3):
             color,
             thickness=-1,
         )
+        
     return img
 
 # def draw_keypoints(img, corners, color=(0, 255, 0), radius=3, s=3):
