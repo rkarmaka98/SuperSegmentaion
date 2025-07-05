@@ -4,7 +4,7 @@
 data:
     dataset: 'Cityscapes'
     root: 'datasets/Cityscapes'  # path to Cityscapes images
-    labels: logs/magicpoint_synth_homoAdapt_coco/predictions
+    labels: logs/magicpoint_synth_homoAdapt_cityscape/predictions
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
     cache_in_memory: false
     load_segmentation: true
@@ -58,7 +58,7 @@ front_end_model: 'Train_model_heatmap'  # use heatmap detector
 training:
     workers_train: 12
     workers_val: 2
-
+    workers_test: 2
 
 model:
     name: 'SuperPointNet_gauss2'
