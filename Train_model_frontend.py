@@ -160,6 +160,17 @@ class Train_model_frontend(object):
         print("=" * 32)
         pass
 
+    def freeze_detector_params(self):
+        """Freeze detector and descriptor weights when requested."""
+        if not self.config["model"].get("freeze_detector", False):
+            return
+        logging.info("Freezing detector and descriptor parameters")
+        # keep segmentation head trainable, freeze everything else
+        trainable = ("seg_head", "seg_aspp")
+        for name, param in self.net.named_parameters():
+            if not any(t in name for t in trainable):
+                param.requires_grad = False
+
     def dataParallel(self):
         """
         put network and optimizer to multiple gpus
@@ -167,6 +178,8 @@ class Train_model_frontend(object):
         """
         print("=== Let's use", torch.cuda.device_count(), "GPUs!")
         self.net = nn.DataParallel(self.net)
+        # optionally freeze detector/descriptor weights when fine-tuning
+        self.freeze_detector_params()
         self.optimizer = self.adamOptim(
             self.net, lr=self.config["model"]["learning_rate"]
         )
@@ -182,7 +195,9 @@ class Train_model_frontend(object):
         print("adam optimizer")
         import torch.optim as optim
 
-        optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.9, 0.999))
+        # only optimize parameters that require gradients
+        params = filter(lambda p: p.requires_grad, net.parameters())
+        optimizer = optim.Adam(params, lr=lr, betas=(0.9, 0.999))
         return optimizer
 
     def loadModel(self):

@@ -127,6 +127,9 @@ to `evaluation.py`.
 
 Both configs load a checkpoint via their `pretrained` option. Update this path
 to point at the model you wish to fine-tune or evaluate.
+Set `model.freeze_detector: true` in `superpoint_cityscapes_finetune.yaml` to
+freeze the keypoint detector and only train the segmentation head during
+fine-tuning.
 
 When `warped_pair.enable` is set to true in `superpoint_cityscapes_export.yaml`,
 the Cityscapes loader also returns `warped_image` and its corresponding
