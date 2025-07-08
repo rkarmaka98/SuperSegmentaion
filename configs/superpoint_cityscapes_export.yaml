@@ -19,9 +19,9 @@ data:
             rotation: true
             scaling: true
             perspective: true
-            scaling_amplitude: 0.01
-            perspective_amplitude_x: 0.005
-            perspective_amplitude_y: 0.005
+            yaw_range: 1.0
+            pitch_range: 1.0
+            roll_range: 1.0
             patch_ratio: 0.9
             allow_artifacts: false
         valid_border_margin: 3
