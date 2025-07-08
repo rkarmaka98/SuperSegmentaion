@@ -15,7 +15,7 @@ data:
         params:
             GaussianBlur: {sigma: 0.2}
     preprocessing:
-        resize: [240, 320] #[512, 1024]  # images are downsampled for training
+        resize: [512, 1024]  # images are downsampled for training
     augmentation:
         photometric:
             enable: true
@@ -23,8 +23,8 @@ data:
                 'random_brightness', 'random_contrast', 'additive_speckle_noise',
                 'additive_gaussian_noise', 'additive_shade', 'motion_blur']
             params:
-                random_brightness: {max_abs_change: 50}
-                random_contrast: {strength_range: [0.5, 1.5]}
+                random_brightness: {max_abs_change: 30}
+                random_contrast: {strength_range: [0.8, 1.2]}
                 additive_gaussian_noise: {stddev_range: [0, 10]}
                 additive_speckle_noise: {prob_range: [0, 0.0035]}
                 additive_shade:
@@ -32,13 +32,7 @@ data:
                     kernel_size_range: [100, 150]
                 motion_blur: {max_kernel_size: 3}
         homographic:
-            enable: true
-            num_homographies: 10       # samples per image for aggregation
-            max_angle: 0.005             # in radians (~10°)
-            translate: 0.005              # relative to image size
-            scale: [0.03, 0.05]
-            perspective: 0.005
-            allow_artifacts: false
+            enable: false
     warped_pair:
         enable: true
         params:
@@ -46,13 +40,13 @@ data:
             rotation: true
             scaling: true
             perspective: true
-            scaling_amplitude: 0.005  # reduced for gentler warp
-            perspective_amplitude_x: 0.005  # reduced for gentler warp
-            perspective_amplitude_y: 0.005  # reduced for gentler warp
-            patch_ratio: 0.9  # wider valid area
-            max_angle: 0.1  # ~17 degrees
-            allow_artifacts: false
-        valid_border_margin: 3
+            scaling_amplitude: 0.15  # reduced for gentler warp
+            perspective_amplitude_x: 0.1  # reduced for gentler warp
+            perspective_amplitude_y: 0.1  # reduced for gentler warp
+            patch_ratio: 0.85  # wider valid area
+            max_angle: 1.0  # ~57 degrees
+            allow_artifacts: true
+        valid_border_margin: 10
 
 front_end_model: 'Train_model_heatmap'  # use heatmap detector
 training:
@@ -66,29 +60,27 @@ model:
     detector_loss:
         loss_type: 'softmax'
 
-    batch_size: 8
-    eval_batch_size: 8
-    learning_rate: 0.0001  # reasonable learning rate
-    detection_threshold: 0.005
+    batch_size: 4
+    eval_batch_size: 4
+    learning_rate: 0.00005  # reasonable learning rate
+    detection_threshold: 0.015
     lambda_loss: 1
     lambda_segmentation: 1.0
     num_segmentation_classes: 4
     compute_miou: true  # log mIoU for each batch
-    nms: 3
+    nms: 4
     dense_loss:
         enable: false
-        params:
-            descriptor_dist: 4
-            lambda_d: 800
+
     sparse_loss:
         enable: true
         params:
-            num_matching_attempts: 100
-            num_masked_non_matches_per_match: 10
+            num_matching_attempts: 1000
+            num_masked_non_matches_per_match: 100
             lamda_d: 1
             dist: 'cos'
             method: '2d'
-    other_settings: 'train 2d, gauss 0.2'
+    other_settings: 'finetune 2d, gauss 0.2'
 
 retrain: True
 reset_iter: True
