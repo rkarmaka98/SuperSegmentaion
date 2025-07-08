@@ -194,7 +194,13 @@ class Cityscapes(data.Dataset):
         # camera intrinsics and extrinsics for this frame
         if 'K' not in sample:
             K, R_C_to_V, t_C_to_V = self._load_camera_matrices(sample.get('camera'))
-            K_inv = np.linalg.inv(K)
+            try:
+                # standard inverse of intrinsics
+                K_inv = np.linalg.inv(K)
+            except np.linalg.LinAlgError:
+                # fallback to pseudo-inverse when K is singular
+                logging.warning('Camera intrinsics singular; using pseudo-inverse')
+                K_inv = np.linalg.pinv(K)
             R_V_to_C = R_C_to_V.T
             t_V_to_C = -R_V_to_C @ t_C_to_V
             Rt = np.hstack((R_C_to_V, t_C_to_V.reshape(3, 1)))
@@ -261,7 +267,12 @@ class Cityscapes(data.Dataset):
             params = self.config['augmentation']['homographic'].get('params', {})
             R_perturb = self._sample_rotation(params)
             homography = sample['K'] @ R_perturb @ sample['K_inv']
-            homo_inv = np.linalg.inv(homography)
+            try:
+                # standard inverse for augmentation
+                homo_inv = np.linalg.inv(homography)
+            except np.linalg.LinAlgError:
+                logging.warning('Augmentation homography singular; using pseudo-inverse')
+                homo_inv = np.linalg.pinv(homography)
             image_tensor = inv_warp_image_batch(
                 image_tensor.unsqueeze(0),
                 torch.tensor(homo_inv, dtype=torch.float32),
@@ -300,7 +311,14 @@ class Cityscapes(data.Dataset):
                 for _ in range(homoAdapt_iter)
             ])
             # use inverse homographies as defined by the loader
-            homographies = np.stack([np.linalg.inv(h) for h in homographies])
+            inv_list = []
+            for h in homographies:
+                try:
+                    inv_list.append(np.linalg.inv(h))
+                except np.linalg.LinAlgError:
+                    logging.warning('Homography adaptation singular; using pseudo-inverse')
+                    inv_list.append(np.linalg.pinv(h))
+            homographies = np.stack(inv_list)
             homographies[0, :, :] = np.identity(3)
             homographies = torch.tensor(homographies, dtype=torch.float32)
             inv_homographies = torch.stack([
@@ -335,7 +353,11 @@ class Cityscapes(data.Dataset):
             H, W = image_tensor.shape[-2:]
             R_perturb = self._sample_rotation(self.config['warped_pair'].get('params', {}))
             homography = sample['K'] @ R_perturb @ sample['K_inv']
-            homo_inv = np.linalg.inv(homography)
+            try:
+                homo_inv = np.linalg.inv(homography)
+            except np.linalg.LinAlgError:
+                logging.warning('Warped pair homography singular; using pseudo-inverse')
+                homo_inv = np.linalg.pinv(homography)
             warped = inv_warp_image_batch(
                 image_tensor.unsqueeze(0),
                 torch.tensor(homo_inv, dtype=torch.float32),
