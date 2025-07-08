@@ -1,7 +1,5 @@
 """Testing file (not sorted yet)
 
-"""
-
 import torch
 import numpy as np
 
@@ -13,7 +11,7 @@ import matplotlib.pyplot as plt
 from utils.draw import plot_imgs
 
 from utils.utils import pltImshow
-path = '/home/yoyee/Documents/deepSfm/logs/superpoint_hpatches_pretrained/predictions/'
+path = 'logs/magicpoint_synth_homoAdapt_cityscape/predictions/train'
 for i in range(10):
     data = np.load(path + str(i) + '.npz')
     # p1 = '/home/yoyee/Documents/deepSfm/datasets/HPatches/v_abstract/1.ppm'
@@ -39,3 +37,60 @@ for i in range(10):
     img2 = np.concatenate([img2, img2, img2], axis=2)
     plot_imgs([img1, img2, warped_img1], titles=['img1', 'img2', 'warped_img1'], dpi=200)
     plt.savefig( 'test' + str(i) + '.png')
+
+    """
+    
+import os,sys
+
+# Add the project’s root directory (one level up) to Python’s import path:
+SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
+sys.path.insert(0, PROJECT_ROOT)
+
+import glob
+
+import cv2
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
+from numpy.linalg import inv
+from utils.utils import inv_warp_image_batch, pltImshow
+from utils.draw import plot_imgs
+
+# point this to your folder containing the .npz predictions
+base_dir = r'.'
+
+# find and sort all .npz files
+npz_paths = sorted(glob.glob(os.path.join(base_dir, '*.npz')))
+
+for npz_path in tqdm(npz_paths):
+    # load the archive
+    data = np.load(npz_path)
+    H = data['homography']            # (3×3)
+    img1 = data['image'][..., np.newaxis]       # (H×W×1)
+    img2 = data['warped_image'][..., np.newaxis]  # (H×W×1)
+
+    # warp img1 by H
+    # OpenCV wants (width, height)
+    h, w = img1.shape[:2]
+    warped_img1 = cv2.warpPerspective(img1, H.astype(np.float32), (w, h))
+
+    # convert to 3-channel for plotting
+    img1_rgb       = np.repeat(img1,       3, axis=2)
+    img2_rgb       = np.repeat(img2,       3, axis=2)
+    warped_img1_rgb = np.repeat(warped_img1, 3, axis=2)
+
+    # plot and save
+    plot_imgs(
+        [img1_rgb, img2_rgb, warped_img1_rgb],
+        titles=['img1', 'img2', 'warped_img1'],
+        dpi=200
+    )
+
+    # build a matching save name, e.g. test_aachen_000000_000019.png
+    base_name = os.path.splitext(os.path.basename(npz_path))[0]
+    out_path = os.path.join(base_dir, f'test_{base_name}.png')
+    plt.savefig(out_path)
+    print(f'Saved visualization to {out_path}')
