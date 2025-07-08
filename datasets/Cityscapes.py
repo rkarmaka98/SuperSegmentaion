@@ -7,6 +7,7 @@ import torch
 import torch.utils.data as data
 
 # for generating warped pairs
+# planar homography sampler used for homography adaptation
 from utils.homographies import sample_homography_np
 # utils for warping and computing valid masks
 from utils.utils import inv_warp_image, compute_valid_mask, inv_warp_image_batch
@@ -191,13 +192,30 @@ class Cityscapes(data.Dataset):
         output['valid_mask'] = valid_mask
 
         # camera intrinsics and extrinsics for this frame
-        K, R, t = self._load_camera_matrices(sample.get('camera'))
+        if 'K' not in sample:
+            K, R_C_to_V, t_C_to_V = self._load_camera_matrices(sample.get('camera'))
+            K_inv = np.linalg.inv(K)
+            R_V_to_C = R_C_to_V.T
+            t_V_to_C = -R_V_to_C @ t_C_to_V
+            Rt = np.hstack((R_C_to_V, t_C_to_V.reshape(3, 1)))
+            sample.update({
+                'K': K,
+                'K_inv': K_inv,
+                'R_C_to_V': R_C_to_V,
+                't_C_to_V': t_C_to_V,
+                'R_V_to_C': R_V_to_C,
+                't_V_to_C': t_V_to_C,
+                'P': K @ Rt,
+            })
+        K = sample['K']
+        K_inv = sample['K_inv']
         output['K'] = torch.from_numpy(K)
-        output['K_inv'] = torch.from_numpy(np.linalg.inv(K))
-        output['R_C_to_V'] = torch.from_numpy(R)
-        output['t_C_to_V'] = torch.from_numpy(t)
-        Rt = np.hstack((R, t.reshape(3, 1)))
-        output['P'] = torch.from_numpy(K @ Rt)
+        output['K_inv'] = torch.from_numpy(K_inv)
+        output['R_C_to_V'] = torch.from_numpy(sample['R_C_to_V'])
+        output['t_C_to_V'] = torch.from_numpy(sample['t_C_to_V'])
+        output['R_V_to_C'] = torch.from_numpy(sample['R_V_to_C'])
+        output['t_V_to_C'] = torch.from_numpy(sample['t_V_to_C'])
+        output['P'] = torch.from_numpy(sample['P'])
 
         # load keypoint labels if available
         pnts = None
@@ -237,6 +255,39 @@ class Cityscapes(data.Dataset):
 
             # semantic segmentation mask with dtype long and shape (H, W)
             output['segmentation_mask'] = seg_mask
+
+        # orientation-based augmentation of image and labels
+        if self.config.get('augmentation', {}).get('homographic', {}).get('enable', False):
+            params = self.config['augmentation']['homographic'].get('params', {})
+            R_perturb = self._sample_rotation(params)
+            homography = sample['K'] @ R_perturb @ sample['K_inv']
+            homo_inv = np.linalg.inv(homography)
+            image_tensor = inv_warp_image_batch(
+                image_tensor.unsqueeze(0),
+                torch.tensor(homo_inv, dtype=torch.float32),
+                mode='bilinear',
+            ).squeeze(0)
+            valid_mask = compute_valid_mask(
+                torch.tensor([H, W]),
+                torch.tensor(homo_inv, dtype=torch.float32),
+                erosion_radius=self.config['augmentation']['homographic']['valid_border_margin'],
+            )
+            output['valid_mask'] = valid_mask
+            if 'segmentation_mask' in output:
+                seg_warp = inv_warp_image_batch(
+                    output['segmentation_mask'].float().unsqueeze(0),
+                    torch.tensor(homo_inv, dtype=torch.float32),
+                    mode='nearest',
+                ).squeeze(0).long()
+                output['segmentation_mask'] = seg_warp
+            if self.labels:
+                warped_set = warpLabels(pnts, H, W, torch.tensor(homography, dtype=torch.float32), bilinear=True)
+                output['labels_2D'] = warped_set['labels']
+                output['labels_res'] = warped_set['res'].transpose(1,2).transpose(0,1)
+                if self.gaussian_label:
+                    warped_labels_gaussian = self.gaussian_blur(squeezeToNumpy(warped_set['labels_bi']))
+                    output['labels_2D_gaussian'] = np_to_tensor(warped_labels_gaussian, H, W)
+            output['image'] = image_tensor
 
         # homography adaptation to generate multiple warped views
         if self.config.get('homography_adaptation', {}).get('enable', False):
@@ -279,37 +330,27 @@ class Cityscapes(data.Dataset):
                 'inv_homographies': inv_homographies,
             })
 
-        # optionally generate a warped pair and provide fields compatible with
-        # the training pipeline
+        # optionally generate a warped pair using small orientation perturbations
         if self.config.get('warped_pair', {}).get('enable', False):
             H, W = image_tensor.shape[-2:]
-            # sample homography mapping warped image to original
-            homo_inv = sample_homography_np(
-                np.array([H, W]), shift=-1,
-                **self.config['warped_pair'].get('params', {})
-            )
-            # invert to obtain transformation from original to warped
-            homography = np.linalg.inv(homo_inv)
-            # warp original image using the inverse matrix
+            R_perturb = self._sample_rotation(self.config['warped_pair'].get('params', {}))
+            homography = sample['K'] @ R_perturb @ sample['K_inv']
+            homo_inv = np.linalg.inv(homography)
             warped = inv_warp_image_batch(
                 image_tensor.unsqueeze(0),
                 torch.tensor(homo_inv, dtype=torch.float32),
             ).squeeze(0)
-            # store both naming conventions for compatibility
             output['warped_image'] = warped.unsqueeze(0)
             output['warped_img'] = output['warped_image']
-            # homographies in both directions for descriptor loss
             H_mat = torch.tensor(homography, dtype=torch.float32)
             H_inv_mat = torch.tensor(homo_inv, dtype=torch.float32)
             output['homography'] = H_mat
             output['homographies'] = H_mat.unsqueeze(0)
             output['inv_homographies'] = H_inv_mat.unsqueeze(0)
-            # valid mask used when computing descriptor loss
             margin = self.config['warped_pair'].get('valid_border_margin', 0)
             valid_mask = compute_valid_mask(torch.tensor([H, W]), H_inv_mat, erosion_radius=margin)
             output['warped_valid_mask'] = valid_mask
 
-            # warp keypoint labels when available
             if self.labels:
                 warped_set = warpLabels(pnts, H, W, torch.tensor(homography, dtype=torch.float32), bilinear=True)
                 output['warped_labels'] = warped_set['labels']
@@ -339,6 +380,37 @@ class Cityscapes(data.Dataset):
         image = image[:, :, np.newaxis]
         heatmaps = augmentation(image)
         return heatmaps.squeeze()
+
+    @staticmethod
+    def _euler_to_matrix(yaw, pitch, roll):
+        """Convert yaw/pitch/roll angles to a rotation matrix."""
+        Rz = np.array([
+            [np.cos(yaw), -np.sin(yaw), 0],
+            [np.sin(yaw), np.cos(yaw), 0],
+            [0, 0, 1],
+        ], dtype=np.float32)
+        Ry = np.array([
+            [np.cos(pitch), 0, np.sin(pitch)],
+            [0, 1, 0],
+            [-np.sin(pitch), 0, np.cos(pitch)],
+        ], dtype=np.float32)
+        Rx = np.array([
+            [1, 0, 0],
+            [0, np.cos(roll), -np.sin(roll)],
+            [0, np.sin(roll), np.cos(roll)],
+        ], dtype=np.float32)
+        return Rz @ Ry @ Rx
+
+    @staticmethod
+    def _sample_rotation(params):
+        """Sample a random rotation matrix using Euler angle ranges in degrees."""
+        yaw_rng = params.get('yaw_range', 0)
+        pitch_rng = params.get('pitch_range', 0)
+        roll_rng = params.get('roll_range', 0)
+        yaw = np.deg2rad(np.random.uniform(-yaw_rng, yaw_rng))
+        pitch = np.deg2rad(np.random.uniform(-pitch_rng, pitch_rng))
+        roll = np.deg2rad(np.random.uniform(-roll_rng, roll_rng))
+        return Cityscapes._euler_to_matrix(yaw, pitch, roll)
 
     def _load_camera_matrices(self, cam_path):
         """Load intrinsics and extrinsics from a camera file."""
