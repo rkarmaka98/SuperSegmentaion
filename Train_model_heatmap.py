@@ -67,6 +67,7 @@ class Train_model_heatmap(Train_model_frontend):
         "model": {
             "subpixel": {"enable": False},
             "compute_miou": False,
+            "freeze_det_desc": False,  # freeze detector/descriptor heads
         },
         "data": {"gaussian_label": {"enable": False}},
     }
@@ -203,6 +204,9 @@ class Train_model_heatmap(Train_model_frontend):
         mask_2D = sample.get("valid_mask")
 
         has_kpt_labels = labels_2D is not None
+        if self.config["model"].get("freeze_det_desc", False):
+            # ignore keypoint labels when detector/descriptor heads are frozen
+            has_kpt_labels = False
 
         # enable warping when the dataset provides a warped pair. Some datasets
         # use the key 'warped_image' instead of 'warped_img'.
