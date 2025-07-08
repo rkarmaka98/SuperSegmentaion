@@ -14,8 +14,9 @@ from utils.utils import inv_warp_image, compute_valid_mask, inv_warp_image_batch
 from datasets.data_tools import warpLabels, np_to_tensor
 from utils.var_dim import squeezeToNumpy
 
-from settings import DATA_PATH
+from settings import DATA_PATH, EXPER_PATH
 from utils.tools import dict_update
+from utils.draw import draw_keypoints
 
 # Mean and standard deviation of RGB channels computed on the Cityscapes dataset
 CITYSCAPES_MEAN = (0.28689554, 0.32513303, 0.28389177)
@@ -55,6 +56,8 @@ class Cityscapes(data.Dataset):
             'resize': [256, 512]
         },
         'num_parallel_calls': 10,
+        # optionally dump warped pairs for debugging
+        'debug_dump': False,
         # optional data augmentation similar to the COCO loader
         'augmentation': {
             'photometric': {
@@ -117,6 +120,12 @@ class Cityscapes(data.Dataset):
 
         # gaussian heatmap flag
         self.gaussian_label = self.config.get('gaussian_label', {}).get('enable', False)
+
+        # directory for dumping warped pairs when debugging is enabled
+        self.debug_dump = self.config.get('debug_dump', False)
+        if self.debug_dump:
+            self.dump_dir = Path(EXPER_PATH, 'debug_warped', self.split)
+            self.dump_dir.mkdir(parents=True, exist_ok=True)
 
         # root directory with leftImg8bit/ and gtFine/ folders
         self.root = Path(self.config.get('root', Path(DATA_PATH, 'Cityscapes')))
@@ -360,6 +369,22 @@ class Cityscapes(data.Dataset):
                     warped_labels_gaussian = self.gaussian_blur(squeezeToNumpy(warped_set['labels_bi']))
                     output['warped_labels_gaussian'] = np_to_tensor(warped_labels_gaussian, H, W)
                     output['warped_labels_bi'] = warped_set['labels_bi']
+
+            # save warped image and mask when debugging is enabled
+            if self.debug_dump:
+                img_np = squeezeToNumpy(output['warped_image'])
+                if img_np.ndim == 3:
+                    img_np = img_np.mean(0)
+                mask_np = squeezeToNumpy(output['warped_valid_mask'])
+                if 'warped_labels' in output:
+                    pts = torch.nonzero(output['warped_labels'][0]).flip(1).numpy()
+                    overlay = draw_keypoints(img_np * 255, pts)
+                else:
+                    overlay = np.repeat(img_np[None, ...], 3, 0).transpose(1, 2, 0) * 255
+                img_file = self.dump_dir / f"{sample['name']}_warped.png"
+                mask_file = self.dump_dir / f"{sample['name']}_mask.png"
+                cv2.imwrite(str(img_file), overlay.astype(np.uint8))
+                cv2.imwrite(str(mask_file), (mask_np * 255).astype(np.uint8))
 
         return output
 
