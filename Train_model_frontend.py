@@ -735,10 +735,10 @@ class Train_model_frontend(object):
                 img = tb_imgs[element][idx, ...]
                 if img.ndim == 3:
                     # handle both CHW and HWC layout
-                    if img.shape[0] > 4:  # CHW with many channels
+                    if img.shape[-1] <= 4:  # HWC with 1-4 channels
+                        img = img[..., :3].transpose(2, 0, 1)
+                    else:  # assume CHW format
                         img = img[:3]
-                    elif img.shape[-1] > 4:  # HWC with many channels
-                        img = img[..., :3]
                 self.writer.add_image(
                     task + "-" + element + "/%d" % idx,
                     img,
