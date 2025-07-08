@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import json  # for reading camera files
 import cv2
 import numpy as np
 import torch
@@ -131,12 +132,24 @@ class Cityscapes(data.Dataset):
             name = img_path.stem.replace('_leftImg8bit', '')
             mask_name = img_path.stem.replace('_leftImg8bit', '_gtFine_labelIds.png')
             mask_path = self.mask_root / rel.parent / mask_name
+            camera_dir = self.root / 'camera' / self.split / rel.parent
+            json_path = camera_dir / f'{name}_camera.json'
+            txt_path = camera_dir / f'{name}_camera.txt'
+            # store whichever camera file exists
+            if json_path.exists():
+                cam_file = json_path
+            elif txt_path.exists():
+                cam_file = txt_path
+            else:
+                logging.warning('Missing camera file for %s', img_path)
+                cam_file = None
             sample = {
                 'image': str(img_path),
                 'mask': str(mask_path),
                 'name': name,
                 # city identifier used as scene name for export
                 'scene_name': rel.parent.name,
+                'camera': str(cam_file) if cam_file is not None else None,
             }
             if self.labels:
                 label_path = Path(self.config['labels'], self.split, f"{name}.npz")
@@ -176,6 +189,15 @@ class Cityscapes(data.Dataset):
         # always provide a valid mask for the current image
         valid_mask = compute_valid_mask(torch.tensor([H, W]), torch.eye(3))
         output['valid_mask'] = valid_mask
+
+        # camera intrinsics and extrinsics for this frame
+        K, R, t = self._load_camera_matrices(sample.get('camera'))
+        output['K'] = torch.from_numpy(K)
+        output['K_inv'] = torch.from_numpy(np.linalg.inv(K))
+        output['R_C_to_V'] = torch.from_numpy(R)
+        output['t_C_to_V'] = torch.from_numpy(t)
+        Rt = np.hstack((R, t.reshape(3, 1)))
+        output['P'] = torch.from_numpy(K @ Rt)
 
         # load keypoint labels if available
         pnts = None
@@ -317,3 +339,64 @@ class Cityscapes(data.Dataset):
         image = image[:, :, np.newaxis]
         heatmaps = augmentation(image)
         return heatmaps.squeeze()
+
+    def _load_camera_matrices(self, cam_path):
+        """Load intrinsics and extrinsics from a camera file."""
+        if cam_path is None or not Path(cam_path).exists():
+            # fallback to identity matrices when camera file is missing
+            K = np.eye(3, dtype=np.float32)
+            R = np.eye(3, dtype=np.float32)
+            t = np.zeros(3, dtype=np.float32)
+            return K, R, t
+
+        # read json or simple txt format
+        try:
+            with open(cam_path, 'r') as f:
+                data = json.load(f)
+        except Exception:
+            data = {}
+            with open(cam_path, 'r') as f:
+                for line in f:
+                    if ':' in line:
+                        k, v = line.split(':', 1)
+                        data[k.strip()] = float(v.strip())
+
+        fx = float(data.get('fx', 0))
+        fy = float(data.get('fy', 0))
+        u0 = float(data.get('u0', 0))
+        v0 = float(data.get('v0', 0))
+        K = np.array([[fx, 0, u0], [0, fy, v0], [0, 0, 1]], dtype=np.float32)
+
+        yaw = float(data.get('yawextrinsic', 0))
+        pitch = float(data.get('pitchextrinsic', 0))
+        roll = float(data.get('rollextrinsic', 0))
+        x = float(data.get('xextrinsic', 0))
+        y = float(data.get('yextrinsic', 0))
+        z = float(data.get('zextrinsic', 0))
+
+        # convert degrees to radians if needed
+        if max(abs(yaw), abs(pitch), abs(roll)) > 2 * np.pi:
+            yaw = np.deg2rad(yaw)
+            pitch = np.deg2rad(pitch)
+            roll = np.deg2rad(roll)
+
+        # rotation matrices around each axis
+        Rz = np.array([
+            [np.cos(yaw), -np.sin(yaw), 0],
+            [np.sin(yaw), np.cos(yaw), 0],
+            [0, 0, 1],
+        ], dtype=np.float32)
+        Ry = np.array([
+            [np.cos(pitch), 0, np.sin(pitch)],
+            [0, 1, 0],
+            [-np.sin(pitch), 0, np.cos(pitch)],
+        ], dtype=np.float32)
+        Rx = np.array([
+            [1, 0, 0],
+            [0, np.cos(roll), -np.sin(roll)],
+            [0, np.sin(roll), np.cos(roll)],
+        ], dtype=np.float32)
+        R = Rz @ Ry @ Rx
+        t = np.array([x, y, z], dtype=np.float32)
+        return K, R, t
+
