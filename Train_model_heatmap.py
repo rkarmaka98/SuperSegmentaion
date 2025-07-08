@@ -230,6 +230,10 @@ class Train_model_heatmap(Train_model_frontend):
         #     sample['warped_valid_mask'].to(self.device)
         if if_warp:
             img_warp = sample.get("warped_img", sample.get("warped_image"))
+            # some datasets (e.g. Cityscapes) add an extra leading dimension to
+            # warped images; squeeze it so the network receives N x C x H x W
+            if img_warp.dim() == 5 and img_warp.size(1) == 1:
+                img_warp = img_warp.squeeze(1)
             labels_warp_2D = sample.get("warped_labels")
             mask_warp_2D = sample.get("warped_valid_mask", mask_2D)
 
