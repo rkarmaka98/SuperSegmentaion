@@ -9,6 +9,7 @@ data:
     cache_in_memory: false
     load_segmentation: true
     reduce_to_4_categories: true
+    debug_dump: false
     num_segmentation_classes: 4
     gaussian_label:
         enable: true

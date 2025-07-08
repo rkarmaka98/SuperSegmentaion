@@ -11,6 +11,7 @@ data:
     preprocessing:
         resize: [240, 320] #[512, 1024]
     reduce_to_4_categories: true
+    debug_dump: false
     # generate a warped image pair similar to the training setup
     warped_pair:
         enable: true

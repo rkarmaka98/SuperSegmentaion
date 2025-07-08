@@ -142,6 +142,8 @@ along with `valid_mask`, `homographies` and `inv_homographies` for GPU-based
 homography adaptation export.
 Each sample now also contains a `scene_name` entry (the city identifier) so that
 the export script can organise predictions in subfolders like it does for KITTI.
+Setting `debug_dump: true` in the dataset configuration saves the warped image
+and its valid mask to `logs/debug_warped/<split>/`.
 
 Exporting MagicPoint on Cityscapes now also writes TensorBoard summaries.
 Open TensorBoard in `runs/export_detector_homoAdapt/` to browse keypoint
