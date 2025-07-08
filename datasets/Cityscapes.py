@@ -371,7 +371,8 @@ class Cityscapes(data.Dataset):
                 image_tensor.unsqueeze(0),
                 torch.tensor(homo_inv, dtype=torch.float32),
             ).squeeze(0)
-            output['warped_image'] = warped.unsqueeze(0)
+            # keep 3D tensor so DataLoader batching results in 4-D inputs
+            output['warped_image'] = warped
             output['warped_img'] = output['warped_image']
             H_mat = torch.tensor(homography, dtype=torch.float32)
             H_inv_mat = torch.tensor(homo_inv, dtype=torch.float32)
