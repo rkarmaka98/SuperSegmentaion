@@ -1,6 +1,14 @@
 """Testing file for homography (not sorted yet)
 """
 
+import os,sys
+
+# Add the project’s root directory (one level up) to Python’s import path:
+SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
+sys.path.insert(0, PROJECT_ROOT)
+
+
 import numpy as np
 import tensorflow as tf
 import torch
@@ -43,7 +51,7 @@ def printCorners(corner_img, mat_homographies):
 
 def test_sample_homography():
   batch_size = 30
-  filename = '../configs/superpoint_coco_train.yaml'
+  filename = '../configs/superpoint_cityscapes_finetune.yaml'
   import yaml
   with open(filename, 'r') as f:
     config = yaml.load(f)
