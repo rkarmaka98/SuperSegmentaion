@@ -15,7 +15,7 @@ data:
         params:
             GaussianBlur: {sigma: 0.2}
     preprocessing:
-        resize: [512, 1024]  # images are downsampled for training
+        resize: [256, 512]  # images are downsampled for training
     augmentation:
         photometric:
             enable: true
