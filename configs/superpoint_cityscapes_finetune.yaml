@@ -56,7 +56,9 @@ training:
 
 model:
     name: 'SuperPointNet_gauss2'
-    params: {}
+    # use three-channel inputs when training on RGB datasets
+    params:
+        input_channels: 3
     detector_loss:
         loss_type: 'softmax'
 

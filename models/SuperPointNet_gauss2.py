@@ -50,11 +50,13 @@ class ASPP(nn.Module):
 
 class SuperPointNet_gauss2(torch.nn.Module):
     """ Pytorch definition of SuperPoint Network. """
-    def __init__(self, subpixel_channel=1, num_classes=1):
+    def __init__(self, subpixel_channel=1, num_classes=1, input_channels=1):
         super(SuperPointNet_gauss2, self).__init__()
         c1, c2, c3, c4, c5, d1 = 64, 64, 128, 128, 256, 256
         det_h = 65
-        self.inc = inconv(1, c1)
+        # allow networks trained on RGB images by exposing the number of
+        # input channels; defaults to 1 for backwards compatibility
+        self.inc = inconv(input_channels, c1)
         self.down1 = down(c1, c2)
         self.down2 = down(c2, c3)
         self.down3 = down(c3, c4)
@@ -92,7 +94,8 @@ class SuperPointNet_gauss2(torch.nn.Module):
         """ Forward pass that jointly computes unprocessed point and descriptor
         tensors.
         Input
-          x: Image pytorch tensor shaped N x 1 x patch_size x patch_size.
+          x: Image pytorch tensor shaped N x C x patch_size x patch_size,
+            where C matches ``input_channels``.
         Output
           semi: Output point pytorch tensor shaped N x 65 x H/8 x W/8.
           desc: Output descriptor pytorch tensor shaped N x 256 x H/8 x W/8.

@@ -35,7 +35,9 @@ front_end_model: 'Val_model_heatmap'  # 'Train_model_frontend'
 
 model:
     name: 'SuperPointNet_gauss2'
-    params: {}
+    # match the RGB inputs of the Cityscapes dataset
+    params:
+        input_channels: 3
     lambda_segmentation: 1.0
     num_segmentation_classes: 4
 
