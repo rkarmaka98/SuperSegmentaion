@@ -730,10 +730,18 @@ class Train_model_frontend(object):
             for idx in range(tb_imgs[element].shape[0]):
                 if idx >= max_img:
                     break
-                # print(f"element: {element}")
+                # TensorBoard fails on images with more than 4 channels
+                # (e.g. a 3x3 homography matrix stored as 9 channels).
+                img = tb_imgs[element][idx, ...]
+                if img.ndim == 3:
+                    # handle both CHW and HWC layout
+                    if img.shape[0] > 4:  # CHW with many channels
+                        img = img[:3]
+                    elif img.shape[-1] > 4:  # HWC with many channels
+                        img = img[..., :3]
                 self.writer.add_image(
                     task + "-" + element + "/%d" % idx,
-                    tb_imgs[element][idx, ...],
+                    img,
                     self.n_iter,
                 )
 
