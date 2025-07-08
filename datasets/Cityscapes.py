@@ -15,6 +15,10 @@ from utils.var_dim import squeezeToNumpy
 from settings import DATA_PATH
 from utils.tools import dict_update
 
+# Mean and standard deviation of RGB channels computed on the Cityscapes dataset
+CITYSCAPES_MEAN = (0.28689554, 0.32513303, 0.28389177)
+CITYSCAPES_STD = (0.18696375, 0.19017339, 0.18720214)
+
 
 # mapping from 34 Cityscapes labelIds to 4 broad categories
 # 0 -> Static Structure, 1 -> Flat Surfaces,
@@ -132,10 +136,15 @@ class Cityscapes(data.Dataset):
     def __getitem__(self, index):
         sample = self.samples[index]
         img = cv2.imread(sample['image'], cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # resize and keep RGB information
         img = cv2.resize(img, (self.sizer[1], self.sizer[0]), interpolation=cv2.INTER_AREA)
         img = img.astype(np.float32) / 255.0
-        image_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
+        # convert BGR to RGB for consistency with mean/std
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # normalize each channel
+        img = (img - CITYSCAPES_MEAN) / CITYSCAPES_STD
+        # torch expects channel-first tensors
+        image_tensor = torch.from_numpy(img.transpose(2, 0, 1)).float()
 
         output = {
             'image': image_tensor,
@@ -209,7 +218,7 @@ class Cityscapes(data.Dataset):
 
             # warp original image for each homography
             warped_img = self.inv_warp_image_batch(
-                image_tensor.squeeze().repeat(homoAdapt_iter, 1, 1, 1),
+                image_tensor.repeat(homoAdapt_iter, 1, 1, 1),
                 inv_homographies,
                 mode='bilinear'
             ).unsqueeze(0).squeeze()
@@ -242,10 +251,10 @@ class Cityscapes(data.Dataset):
             # invert to obtain transformation from original to warped
             homography = np.linalg.inv(homo_inv)
             # warp original image using the inverse matrix
-            warped = inv_warp_image(
-                image_tensor.squeeze(0),
+            warped = inv_warp_image_batch(
+                image_tensor.unsqueeze(0),
                 torch.tensor(homo_inv, dtype=torch.float32),
-            )
+            ).squeeze(0)
             # store both naming conventions for compatibility
             output['warped_image'] = warped.unsqueeze(0)
             output['warped_img'] = output['warped_image']

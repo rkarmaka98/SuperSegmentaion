@@ -108,6 +108,9 @@ datasets/ ($DATA_DIR)
         `-- test
 ```
 - If the dataset is stored elsewhere, update `DATA_PATH` in `settings.py`.
+- Images remain in RGB and are normalized per channel using
+  `CITYSCAPES_MEAN=(0.28689554, 0.32513303, 0.28389177)` and
+  `CITYSCAPES_STD=(0.18696375, 0.19017339, 0.18720214)`.
 
 Example commands using the Cityscapes configs:
 
