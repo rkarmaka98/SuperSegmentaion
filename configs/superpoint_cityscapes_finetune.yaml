@@ -74,6 +74,7 @@ model:
     lambda_segmentation: 1.0
     num_segmentation_classes: 4
     compute_miou: true  # log mIoU for each batch
+    freeze_det_desc: true  # only finetune segmentation head
     nms: 3
     dense_loss:
         enable: false

@@ -63,10 +63,12 @@ class Train_model_frontend(object):
         "train_iter": 170000,
         "save_interval": 2000,
         "tensorboard_interval": 200,
-        "model": {"subpixel": {"enable": False},
-                  "lambda_segmentation": 1.0, # weight of optional segmentation loss
-                  "num_segmentation_classes": 0 # number of classes for segmentation head
-                  },
+        "model": {
+            "subpixel": {"enable": False},
+            "lambda_segmentation": 1.0,  # weight of optional segmentation loss
+            "num_segmentation_classes": 0,  # number of classes for segmentation head
+            "freeze_det_desc": False,  # freeze detector/descriptor heads
+        },
     }
 
     def __init__(self, config, save_path=Path("."), device="cpu", verbose=False):
@@ -197,6 +199,26 @@ class Train_model_frontend(object):
             params["num_classes"] = self.num_segmentation_classes
         print("model: ", model)
         net = modelLoader(model=model, **params).to(self.device)
+
+        # freeze detector and descriptor layers when requested
+        if self.config["model"].get("freeze_det_desc", False):
+            logging.info("freezing detector and descriptor heads")
+            freeze_keys = [
+                "convPa",
+                "bnPa",
+                "convPb",
+                "bnPb",
+                "convDa",
+                "bnDa",
+                "convDb",
+                "bnDb",
+                "det_conv",
+                "des_conv",
+            ]
+            for name, param in net.named_parameters():
+                if any(k in name for k in freeze_keys):
+                    param.requires_grad = False
+
         logging.info("=> setting adam solver")
         optimizer = self.adamOptim(net, lr=self.config["model"]["learning_rate"])
 
