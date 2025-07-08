@@ -208,7 +208,7 @@ class Cityscapes(data.Dataset):
                 K_inv = np.linalg.inv(K)
             except np.linalg.LinAlgError:
                 # fallback to pseudo-inverse when K is singular
-                logging.warning('Camera intrinsics singular; using pseudo-inverse')
+                # logging.warning('Camera intrinsics singular; using pseudo-inverse')
                 K_inv = np.linalg.pinv(K)
             R_V_to_C = R_C_to_V.T
             t_V_to_C = -R_V_to_C @ t_C_to_V
@@ -365,7 +365,7 @@ class Cityscapes(data.Dataset):
             try:
                 homo_inv = np.linalg.inv(homography)
             except np.linalg.LinAlgError:
-                logging.warning('Warped pair homography singular; using pseudo-inverse')
+                # logging.warning('Warped pair homography singular; using pseudo-inverse')
                 homo_inv = np.linalg.pinv(homography)
             warped = inv_warp_image_batch(
                 image_tensor.unsqueeze(0),

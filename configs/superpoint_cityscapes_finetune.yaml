@@ -65,7 +65,7 @@ model:
 
     batch_size: 4
     eval_batch_size: 4
-    learning_rate: 0.00005  # reasonable learning rate
+    learning_rate: 0.0001  # reasonable learning rate
     detection_threshold: 0.015
     lambda_loss: 1
     lambda_segmentation: 1.0
