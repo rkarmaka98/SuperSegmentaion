@@ -80,6 +80,24 @@ class Cityscapes(data.Dataset):
         },
     }
 
+    # To recompute the dataset mean and standard deviation run the following
+    # snippet. It loads the dataset with the same preprocessing parameters and
+    # iterates over all images to aggregate statistics.
+    #
+    # from datasets.Cityscapes import Cityscapes
+    # from torch.utils.data import DataLoader
+    # import numpy as np
+    #
+    # ds = Cityscapes(root='/path/to/Cityscapes', load_segmentation=False)
+    # loader = DataLoader(ds, batch_size=1, shuffle=False, num_workers=4)
+    # means, stds = [], []
+    # for batch in loader:
+    #     img = batch['image']
+    #     means.append(img.mean().item())
+    #     stds.append(img.std().item())
+    # print('mean:', np.mean(means))
+    # print('std:', np.mean(stds))
+
     def __init__(self, transform=None, task='train', **config):
         """Initialize dataset by crawling Cityscapes folders."""
         self.config = dict_update(self.default_config, config)

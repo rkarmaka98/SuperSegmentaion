@@ -159,6 +159,29 @@ global pooling. Statistics become invalid and the network outputs NaNs.
 These layers now use `GroupNorm`, which works reliably even when the
 batch size is one.
 
+### Computing mean and std
+When using custom preprocessing it can be useful to recompute the mean and
+standard deviation of the Cityscapes images. The snippet below iterates over the
+dataset and reports these values:
+
+```python
+from datasets.Cityscapes import Cityscapes
+from torch.utils.data import DataLoader
+import numpy as np
+
+ds = Cityscapes(root='path/to/Cityscapes', load_segmentation=False)
+loader = DataLoader(ds, batch_size=1, shuffle=False, num_workers=4)
+
+means, stds = [], []
+for sample in loader:
+    img = sample['image']
+    means.append(img.mean().item())
+    stds.append(img.std().item())
+
+print('mean:', np.mean(means))
+print('std:', np.mean(stds))
+```
+
 
 ## run the code
 - Notes:
