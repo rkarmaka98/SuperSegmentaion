@@ -704,13 +704,14 @@ def compute_valid_mask(image_shape, inv_homography, device='cpu', erosion_radius
     mask = torch.ones(batch_size, 1, image_shape[0], image_shape[1]).to(device)
     mask = inv_warp_image_batch(mask, inv_homography, device=device, mode='nearest')
     mask = mask.view(batch_size, image_shape[0], image_shape[1])
-    mask = mask.cpu().numpy()
+    # perform erosion on tensor without converting to numpy
     if erosion_radius > 0:
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (erosion_radius*2,)*2)
-        for i in range(batch_size):
-            mask[i, :, :] = cv2.erode(mask[i, :, :], kernel, iterations=1)
+        kernel_size = erosion_radius * 2 + 1
+        # morphological erosion implemented via negative max pooling
+        mask = -F.max_pool2d(-mask.unsqueeze(1), kernel_size=kernel_size,
+                             stride=1, padding=erosion_radius).squeeze(1)
 
-    return torch.tensor(mask).to(device)
+    return mask
 
 
 def normPts(pts, shape):

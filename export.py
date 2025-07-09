@@ -315,7 +315,7 @@ def export_descriptor(config, output_dir, args):
             )
             writer.add_image(
                 "homography_heatmap",
-                torch.from_numpy(np.abs(homography.cpu().numpy())).unsqueeze(0),
+                homography.abs().unsqueeze(0),
                 count,
             )
 
@@ -628,7 +628,7 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
             )
             writer.add_image(
                 "homography_heatmap",
-                torch.from_numpy(np.abs(homography.cpu().numpy())).unsqueeze(0),
+                homography.abs().unsqueeze(0),
                 count,
             )
 
