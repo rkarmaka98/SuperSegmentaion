@@ -107,12 +107,12 @@ datasets/ ($DATA_DIR)
         |-- val
         `-- test
 ```
-- If the dataset is stored elsewhere, update `DATA_PATH` in `settings.py`.
-- Images remain in RGB and are normalized per channel. The exact values are:
-  - `CITYSCAPES_MEAN=(0.28689554, 0.32513303, 0.28389177)`
-  - `CITYSCAPES_STD=(0.18696375, 0.19017339, 0.18720214)`
-  - When training on these RGB images, set `model.params.input_channels` to
-    `3` as done in `configs/superpoint_cityscapes_finetune.yaml`.
+If the dataset is stored elsewhere, update `DATA_PATH` in `settings.py`.
+Images are loaded in grayscale by default. The grayscale statistics are:
+  - `CITYSCAPES_MEAN_GRAY=0.2986`
+  - `CITYSCAPES_STD_GRAY=0.1881`
+  - Set `model.params.input_channels` to `1` when training on these images as
+    in `configs/superpoint_cityscapes_finetune.yaml`.
 
 Example commands using the Cityscapes configs:
 
