@@ -6,6 +6,7 @@ data:
     root: 'datasets/Cityscapes'  # path to Cityscapes images
     labels: logs/magicpoint_synth_homoAdapt_cityscape/predictions
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
+    grayscale: true               # use single-channel grayscale images
     cache_in_memory: false
     load_segmentation: true
     reduce_to_4_categories: true
@@ -57,9 +58,9 @@ training:
 
 model:
     name: 'SuperPointNet_gauss2'
-    # use three-channel inputs when training on RGB datasets
+    # use single-channel inputs when training on grayscale images
     params:
-        input_channels: 3
+        input_channels: 1
     detector_loss:
         loss_type: 'softmax'
 
