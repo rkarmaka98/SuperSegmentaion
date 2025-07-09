@@ -324,7 +324,7 @@ def warp_points(points, homographies, device=None):
 
 
 # from utils.utils import inv_warp_image_batch
-def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
+def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear', padding_mode='zeros', align_corners=True):
     '''
     Inverse warp images in batch
 
@@ -336,6 +336,13 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
         tensor [batch_size, 3, 3]
     :param device:
         GPU device or CPU
+    :param padding_mode:
+        Padding strategy used by ``grid_sample``. Options are ``'zeros'``,
+        ``'border'`` and ``'reflection'``. ``'zeros'`` leaves pixels outside
+        the input set to zero.
+    :param align_corners:
+        Passed to ``grid_sample`` to indicate how the grid is normalized. When
+        ``True`` the extrema of the input and output tensors are aligned.
     :return:
         batch of warped images
         tensor [batch_size, 1, H, W]
@@ -371,10 +378,17 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
     src_pixel_coords = src_pixel_coords.view([Batch, H, W, 2])
     src_pixel_coords = src_pixel_coords.float()
 
-    warped_img = F.grid_sample(img, src_pixel_coords, mode=mode, align_corners=True)
+    # use provided padding_mode and align_corners options during sampling
+    warped_img = F.grid_sample(
+        img,
+        src_pixel_coords,
+        mode=mode,
+        padding_mode=padding_mode,
+        align_corners=align_corners,
+    )
     return warped_img
 
-def inv_warp_image(img, mat_homo_inv, device='cpu', mode='bilinear'):
+def inv_warp_image(img, mat_homo_inv, device='cpu', mode='bilinear', padding_mode='zeros', align_corners=True):
     '''
     Inverse warp images in batch
 
@@ -386,11 +400,22 @@ def inv_warp_image(img, mat_homo_inv, device='cpu', mode='bilinear'):
         tensor [3, 3]
     :param device:
         GPU device or CPU
+    :param padding_mode:
+        Passed to :func:`grid_sample` for values outside the input image.
+    :param align_corners:
+        Controls normalization of the sampling grid. See :func:`grid_sample`.
     :return:
         batch of warped images
         tensor [H, W]
     '''
-    warped_img = inv_warp_image_batch(img, mat_homo_inv, device, mode)
+    warped_img = inv_warp_image_batch(
+        img,
+        mat_homo_inv,
+        device,
+        mode,
+        padding_mode=padding_mode,
+        align_corners=align_corners,
+    )
     return warped_img.squeeze()
 
 
