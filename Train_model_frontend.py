@@ -24,6 +24,12 @@ from utils.utils import labels2Dto3D, flattenDetection, labels2Dto3D_flattened
 from utils.utils import pltImshow, saveImg
 from utils.utils import precisionRecall_torch
 from utils.utils import save_checkpoint
+from datasets.Cityscapes import (
+    CITYSCAPES_MEAN,
+    CITYSCAPES_STD,
+    CITYSCAPES_MEAN_GRAY,
+    CITYSCAPES_STD_GRAY,
+)
 
 from pathlib import Path
 
@@ -716,6 +722,20 @@ class Train_model_frontend(object):
             self.writer.add_scalar(task + "-" + element, losses[element], self.n_iter)
             # print (task, '-', element, ": ", losses[element].item())
 
+    def _unnormalize_img(self, img):
+        """Undo dataset normalization before TensorBoard logging."""
+        dataset = self.config.get("data", {}).get("dataset", "")
+        if dataset == "Cityscapes":
+            if img.shape[0] == 1:
+                mean = CITYSCAPES_MEAN_GRAY
+                std = CITYSCAPES_STD_GRAY
+                img = img * std + mean
+            elif img.shape[0] >= 3:
+                mean = torch.tensor(CITYSCAPES_MEAN, dtype=img.dtype, device=img.device).view(3, 1, 1)
+                std = torch.tensor(CITYSCAPES_STD, dtype=img.dtype, device=img.device).view(3, 1, 1)
+                img[:3] = img[:3] * std + mean
+        return img
+
     def tb_images_dict(self, task, tb_imgs, max_img=5):
         """
         # add image dictionary to tensorboard
@@ -740,6 +760,7 @@ class Train_model_frontend(object):
                         img = img[..., :3].permute(2, 0, 1)
                     else:  # assume CHW format
                         img = img[:3]
+                img = self._unnormalize_img(img)
                 self.writer.add_image(
                     task + "-" + element + "/%d" % idx,
                     img,
