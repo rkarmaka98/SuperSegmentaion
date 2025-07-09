@@ -736,7 +736,8 @@ class Train_model_frontend(object):
                 if img.ndim == 3:
                     # handle both CHW and HWC layout
                     if img.shape[-1] <= 4:  # HWC with 1-4 channels
-                        img = img[..., :3].transpose(2, 0, 1)
+                        # TensorBoard expects channel-first tensors
+                        img = img[..., :3].permute(2, 0, 1)
                     else:  # assume CHW format
                         img = img[:3]
                 self.writer.add_image(
