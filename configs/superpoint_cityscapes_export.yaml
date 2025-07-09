@@ -8,6 +8,7 @@ data:
     export_folder: 'val'             # choose split
     root: 'datasets/Cityscapes'      # path to Cityscapes images
     segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
+    grayscale: true                  # load images as single-channel
     preprocessing:
         resize: [256, 512] #[512, 1024]
     reduce_to_4_categories: true
@@ -36,9 +37,9 @@ front_end_model: 'Val_model_heatmap'  # 'Train_model_frontend'
 
 model:
     name: 'SuperPointNet_gauss2'
-    # match the RGB inputs of the Cityscapes dataset
+    # match the grayscale inputs of the Cityscapes dataset
     params:
-        input_channels: 3
+        input_channels: 1
     lambda_segmentation: 1.0
     num_segmentation_classes: 4
 

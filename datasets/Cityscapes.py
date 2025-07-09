@@ -56,7 +56,8 @@ class Cityscapes(data.Dataset):
         'truncate': 0,
         'load_segmentation': True,
         # when true, images are returned as single-channel grayscale
-        'grayscale': False,
+        # default now set to True so Cityscapes is processed like COCO
+        'grayscale': True,
         'preprocessing': {
             'resize': [256, 512]
         },

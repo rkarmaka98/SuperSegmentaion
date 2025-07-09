@@ -1,6 +1,7 @@
 data:
     dataset: 'Cityscapes'  # 'coco' 'hpatches'
     export_folder: 'val' # train, val
+    grayscale: true      # load images as grayscale
     preprocessing:
         resize: [240, 320]
         # resize: [480, 640]
@@ -39,8 +40,8 @@ training:
 model:
     # name: 'SuperPointNet' # 'SuperPointNet_gauss2'
     name: 'SuperPointNet_gauss2' # 'SuperPointNet_gauss2'
-    # instruct the network to process RGB images
-    params: {input_channels: 3}
+    # instruct the network to process grayscale images
+    params: {input_channels: 1}
     batch_size: 8
     eval_batch_size: 8
     detection_threshold: 0.015 # 0.015
