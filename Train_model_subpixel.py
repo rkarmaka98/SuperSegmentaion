@@ -192,7 +192,8 @@ class Train_model_subpixel(Train_model_frontend):
         for element in list(tb_imgs):
             for idx in range(tb_imgs[element].shape[0]):
                 if idx >= max_img: break
-                self.writer.add_image(task + '-' + element + '/%d'%idx, 
+                # tb expects channel-first tensors
+                self.writer.add_image(task + '-' + element + '/%d'%idx,
                     tb_imgs[element][idx,...], self.n_iter)
 
     def tb_hist_dict(self, task, tb_dict):
