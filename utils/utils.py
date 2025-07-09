@@ -288,14 +288,15 @@ def warp_points(points, homographies, device=None):
     Warp a list of points with the given homography.
 
     Arguments:
-        points: list of N points, shape (N, 2(x, y))).
+        points: list of N points, shape (N, 2). Coordinates are expected in
+            ``(x, y)`` order.
         homography: batched or not (shapes (B, 3, 3) and (...) respectively).
         device: device to run the computation on. If ``None`` the device of
             ``points`` is used by default.
 
-    Returns: a Tensor of shape (N, 2) or (B, N, 2(x, y)) (depending on whether
+    Returns: a Tensor of shape (N, 2) or (B, N, 2) (depending on whether
             the homography is batched) containing the new coordinates of the
-            warped points.
+            warped points in ``(x, y)`` order.
 
     """
     # Determine device automatically if not provided. Using the same
@@ -303,24 +304,25 @@ def warp_points(points, homographies, device=None):
     if device is None:
         device = points.device
 
-    # expand points len to (x, y, 1)
-    no_batches = len(homographies.shape) == 2
-    homographies = homographies.unsqueeze(0) if no_batches else homographies
-    # homographies = homographies.unsqueeze(0) if len(homographies.shape) == 2 else homographies
+    # Add homogeneous dimension to the points -> (N, 3)
+    points = torch.cat((points.float(), torch.ones((points.shape[0], 1), device=device)), dim=1)
+
+    # Handle unbatched homography by temporarily adding a batch dimension
+    single_h = homographies.dim() == 2
+    homographies = homographies.unsqueeze(0) if single_h else homographies
     batch_size = homographies.shape[0]
-    homographies = homographies.to(device)
-    points = torch.cat((points.float(), torch.ones((points.shape[0], 1)).to(device)), dim=1)
-    points = points.to(device)
-    homographies = homographies.view(batch_size*3,3)
-    # warped_points = homographies*points
-    # points = points.double()
-    warped_points = homographies@points.transpose(0,1)
-    # warped_points = np.tensordot(homographies, points.transpose(), axes=([2], [0]))
-    # normalize the points
-    warped_points = warped_points.view([batch_size, 3, -1])
-    warped_points = warped_points.transpose(2, 1)
-    warped_points = warped_points[:, :, :2] / warped_points[:, :, 2:]
-    return warped_points[0,:,:] if no_batches else warped_points
+
+    # Transpose points so matmul runs on (B,3,3) x (3,N)
+    points_t = points.t().expand(batch_size, -1, -1)
+
+    # Perform batched multiplication
+    warped = torch.matmul(homographies.to(device), points_t)
+
+    # Normalize homogeneous coordinates and keep (x, y) ordering
+    warped = warped[:, :2, :] / warped[:, 2:, :]
+    warped = warped.permute(0, 2, 1)
+
+    return warped[0] if single_h else warped
 
 
 # from utils.utils import inv_warp_image_batch
