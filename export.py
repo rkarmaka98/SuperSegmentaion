@@ -460,6 +460,12 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
         img = img.squeeze(0)
         img_2D = sample["image_2D"].numpy().squeeze()
         mask_2D = mask_2D.squeeze(0)
+        # inputs are (N, H, W) when the dataset outputs grayscale views
+        # restore explicit channel dimension expected by the network
+        if img.dim() == 3:
+            img = img.unsqueeze(1)
+        if mask_2D.dim() == 3:
+            mask_2D = mask_2D.unsqueeze(1)
 
         inv_homographies, homographies = (
             sample["homographies"],
