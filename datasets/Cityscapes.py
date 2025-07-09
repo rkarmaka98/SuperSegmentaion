@@ -21,6 +21,9 @@ from utils.draw import draw_keypoints
 # Mean and standard deviation of RGB channels computed on the Cityscapes dataset
 CITYSCAPES_MEAN = (0.28689554, 0.32513303, 0.28389177)
 CITYSCAPES_STD = (0.18696375, 0.19017339, 0.18720214)
+# Equivalent statistics for grayscale conversion of Cityscapes
+CITYSCAPES_MEAN_GRAY = 0.2986
+CITYSCAPES_STD_GRAY = 0.1881
 
 
 # mapping from 34 Cityscapes labelIds to 4 broad categories
@@ -52,6 +55,8 @@ class Cityscapes(data.Dataset):
         'validation_size': 100,
         'truncate': 0,
         'load_segmentation': True,
+        # when true, images are returned as single-channel grayscale
+        'grayscale': False,
         'preprocessing': {
             'resize': [256, 512]
         },
@@ -176,16 +181,23 @@ class Cityscapes(data.Dataset):
 
     def __getitem__(self, index):
         sample = self.samples[index]
-        img = cv2.imread(sample['image'], cv2.IMREAD_COLOR)
-        # resize and keep RGB information
-        img = cv2.resize(img, (self.sizer[1], self.sizer[0]), interpolation=cv2.INTER_AREA)
-        img = img.astype(np.float32) / 255.0
-        # convert BGR to RGB for consistency with mean/std
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # normalize each channel
-        img = (img - CITYSCAPES_MEAN) / CITYSCAPES_STD
-        # torch expects channel-first tensors
-        image_tensor = torch.from_numpy(img.transpose(2, 0, 1)).float()
+        if self.config.get('grayscale', False):
+            # load single channel image for grayscale training
+            img = cv2.imread(sample['image'], cv2.IMREAD_GRAYSCALE)
+            img = cv2.resize(img, (self.sizer[1], self.sizer[0]), interpolation=cv2.INTER_AREA)
+            img = img.astype(np.float32) / 255.0
+            # normalize grayscale image
+            img = (img - CITYSCAPES_MEAN_GRAY) / CITYSCAPES_STD_GRAY
+            # add channel dimension for pytorch
+            image_tensor = torch.from_numpy(img).unsqueeze(0).float()
+        else:
+            # default: read full color image
+            img = cv2.imread(sample['image'], cv2.IMREAD_COLOR)
+            img = cv2.resize(img, (self.sizer[1], self.sizer[0]), interpolation=cv2.INTER_AREA)
+            img = img.astype(np.float32) / 255.0
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = (img - CITYSCAPES_MEAN) / CITYSCAPES_STD
+            image_tensor = torch.from_numpy(img.transpose(2, 0, 1)).float()
 
         output = {
             'image': image_tensor,
