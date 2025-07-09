@@ -347,12 +347,27 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
         mat_homo_inv = mat_homo_inv.view(1,3,3)
 
     Batch, channel, H, W = img.shape
-    coor_cells = torch.stack(torch.meshgrid(torch.linspace(-1, 1, W), torch.linspace(-1, 1, H), indexing='ij'), dim=2)
+    coor_cells = torch.stack(
+        torch.meshgrid(
+            torch.linspace(-1, 1, W), torch.linspace(-1, 1, H), indexing="ij"
+        ),
+        dim=2,
+    )
     coor_cells = coor_cells.transpose(0, 1)
     coor_cells = coor_cells.to(device)
     coor_cells = coor_cells.contiguous()
 
-    src_pixel_coords = warp_points(coor_cells.view([-1, 2]), mat_homo_inv, device)
+    # Normalization matrices to convert pixel coordinates to [-1, 1].
+    # grid_sample expects normalized coords, while mat_homo_inv is in pixels.
+    N_src = torch.tensor(
+        [[2.0 / W, 0.0, -1.0], [0.0, 2.0 / H, -1.0], [0.0, 0.0, 1.0]],
+        dtype=mat_homo_inv.dtype,
+        device=device,
+    )
+    N_dst = N_src.clone()
+    H_norm = N_dst @ mat_homo_inv.to(device) @ torch.inverse(N_src)
+
+    src_pixel_coords = warp_points(coor_cells.view([-1, 2]), H_norm, device)
     src_pixel_coords = src_pixel_coords.view([Batch, H, W, 2])
     src_pixel_coords = src_pixel_coords.float()
 
