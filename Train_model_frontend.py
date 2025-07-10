@@ -724,6 +724,8 @@ class Train_model_frontend(object):
 
     def _unnormalize_img(self, img):
         """Undo dataset normalization before TensorBoard logging."""
+        # clone to ensure tb_imgs tensors remain unmodified
+        img = img.clone()
         dataset = self.config.get("data", {}).get("dataset", "")
         if dataset == "Cityscapes":
             if img.shape[0] == 1:
