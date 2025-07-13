@@ -26,6 +26,12 @@ from pathlib import Path
 from Train_model_frontend import Train_model_frontend
 
 class Train_model_subpixel(Train_model_frontend):
+    """Training loop for subpixel regression.
+
+    This class inherits the generic frontend but predicts subpixel offsets for
+    detected keypoints.  Important attributes are ``self.cell_size`` describing
+    the output stride and ``self.device`` controlling torch computation device.
+    """
 
     default_config = {
         'train_iter': 170000,
@@ -53,6 +59,13 @@ class Train_model_subpixel(Train_model_frontend):
         print("hello")
 
     def loadModel(self):
+        """Load the subpixel network and optimizer state.
+
+        This follows the configuration to build the model, load pretrained
+        weights when available and prepare ``self.optimizer``.  The iteration
+        counter ``self.n_iter`` is also restored from the checkpoint unless
+        ``reset_iter`` is set.
+        """
         ###### check!
         model = self.config['model']['name']
         params = self.config['model']['params']
@@ -90,6 +103,22 @@ class Train_model_subpixel(Train_model_frontend):
         pass
 
     def train_val_sample(self, sample, n_iter=0, train=False):
+        """Process one sample for training or validation.
+
+        Parameters
+        ----------
+        sample : dict
+            Contains ``image`` tensors and associated labels.
+        n_iter : int
+            Global iteration counter.
+        train : bool, default ``False``
+            Whether to update model weights.
+
+        Returns
+        -------
+        float
+            Loss value for this sample.
+        """
         task = 'train' if train else 'val'
         tb_interval = self.config['tensorboard_interval']
 
@@ -113,18 +142,24 @@ class Train_model_subpixel(Train_model_frontend):
 
         # extract patches
         # extract the patches from labels 
-        label_idx = labels_2D[...].nonzero()
+        label_idx = labels_2D[...].nonzero()  # [N,4] -> batch,y,x with mask
         from utils.losses import extract_patches
         patch_size = self.config['model']['params']['patch_size']
-        patches = extract_patches(label_idx.to(self.device), img.to(self.device), 
-            patch_size=patch_size) # tensor [N, patch_size, patch_size]
+        patches = extract_patches(
+            label_idx.to(self.device),
+            img.to(self.device),
+            patch_size=patch_size,
+        )  # tensor [N, patch_size, patch_size]
         # patches = extract_patches(label_idx.to(device), labels_2D.to(device), patch_size=15) # tensor [N, patch_size, patch_size]
         # print("patches: ", patches.shape)
 
         patch_channels = self.config['model']['params'].get('subpixel_channel', 1)
         if patch_channels == 2:
-            patch_heat = extract_patches(label_idx.to(self.device), img.to(self.device), 
-                patch_size=patch_size) # tensor [N, patch_size, patch_size]
+            patch_heat = extract_patches(
+                label_idx.to(self.device),
+                img.to(self.device),
+                patch_size=patch_size,
+            )  # tensor [N, patch_size, patch_size] for heatmap
 
         def label_to_points(labels_res, points):
             labels_res = labels_res.transpose(1,2).transpose(2,3).unsqueeze(1)
@@ -141,6 +176,11 @@ class Train_model_subpixel(Train_model_frontend):
 
         # loss function
         def get_loss(points_res, pred_res):
+            """L2 loss on predicted subpixel offsets.
+
+            Parameters are shaped ``[N, 2]`` where ``N`` is the number of
+            extracted patches.
+            """
             loss = (points_res - pred_res)
             loss = torch.norm(loss, p=2, dim=-1).mean()
             return loss

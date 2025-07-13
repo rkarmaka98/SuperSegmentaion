@@ -49,15 +49,12 @@ def img_overlap(img_r, img_g, img_gray):  # img_b repeat
 
 
 class Train_model_heatmap(Train_model_frontend):
-    """ Wrapper around pytorch net to help with pre and post image processing. """
+    """Train a SuperPoint-like network using heatmap supervision.
 
-    """
-    * SuperPointFrontend_torch:
-    ** note: the input, output is different from that of SuperPointFrontend
-    heatmap: torch (batch_size, H, W, 1)
-    dense_desc: torch (batch_size, H, W, 256)
-    pts: [batch_size, np (N, 3)]
-    desc: [batch_size, np(256, N)]
+    Main attributes set during initialization include ``device`` used for
+    computation, ``cell_size`` controlling output stride, and optional
+    segmentation configuration.  Subclasses rely on ``self.net`` and
+    ``self.optimizer`` which are created in :py:meth:`loadModel`.
     """
     default_config = {
         "train_iter": 170000,
@@ -157,19 +154,23 @@ class Train_model_heatmap(Train_model_frontend):
     #     pass
 
     def detector_loss(self, input, target, mask=None, loss_type="softmax"):
-        """
-        # apply loss on detectors, default is softmax
-        :param input: prediction
-            tensor [batch_size, 65, Hc, Wc]
-        :param target: constructed from labels
-            tensor [batch_size, 65, Hc, Wc]
-        :param mask: valid region in an image
-            tensor [batch_size, 1, Hc, Wc]
-        :param loss_type:
-            str (l2 or softmax)
-            softmax is used in original paper
-        :return: normalized loss
-            tensor
+        """Compute detection loss between prediction and target heatmaps.
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Prediction tensor of shape ``[batch_size, 65, Hc, Wc]``.
+        target : torch.Tensor
+            Ground truth heatmap of the same shape as ``input``.
+        mask : torch.Tensor, optional
+            Binary mask of valid regions with shape ``[batch_size, 1, Hc, Wc]``.
+        loss_type : str, default "softmax"
+            ``"l2"`` or ``"softmax"`` as described in the original paper.
+
+        Returns
+        -------
+        torch.Tensor
+            Scalar normalized loss value.
         """
         if loss_type == "l2":
             loss_func = nn.MSELoss(reduction="mean")
@@ -182,12 +183,22 @@ class Train_model_heatmap(Train_model_frontend):
         return loss
 
     def train_val_sample(self, sample, n_iter=0, train=False):
-        """
-        # key function
-        :param sample:
-        :param n_iter:
-        :param train:
-        :return:
+        """Run a forward/backward pass for a single training or val sample.
+
+        Parameters
+        ----------
+        sample : dict
+            Batch from the dataloader containing ``image`` and optionally
+            ``labels_2D`` and warped counterparts.
+        n_iter : int, optional
+            Global iteration counter used for TensorBoard logging.
+        train : bool, default ``False``
+            Whether to update model weights.
+
+        Returns
+        -------
+        float
+            Loss value for the current sample.
         """
         to_floatTensor = lambda x: torch.tensor(x).type(torch.FloatTensor)
 
@@ -210,8 +221,8 @@ class Train_model_heatmap(Train_model_frontend):
         self.batch_size = batch_size
         det_loss_type = self.config["model"]["detector_loss"]["loss_type"]
         # print("batch_size: ", batch_size)
-        Hc = H // self.cell_size
-        Wc = W // self.cell_size
+        Hc = H // self.cell_size  # feature map height
+        Wc = W // self.cell_size  # feature map width
 
         # warped images
         # img_warp, labels_warp_2D, mask_warp_2D = sample['warped_img'].to(self.device), \
@@ -310,7 +321,7 @@ class Train_model_heatmap(Train_model_frontend):
         # mask_3D_flattened = self.getMasks(mask_warp_2D, self.cell_size, device=self.device)
         # loss_det_warp = self.get_loss(semi_warp, labels3D_in_loss, mask_3D_flattened, device=self.device)
 
-        mask_desc = mask_3D_flattened.unsqueeze(1)
+        mask_desc = mask_3D_flattened.unsqueeze(1)  # [B,1,Hc,Wc] for descriptors
         lambda_loss = self.config["model"]["lambda_loss"]
         # print("mask_desc: ", mask_desc.shape)
         # print("mask_warp_2D: ", mask_warp_2D.shape)

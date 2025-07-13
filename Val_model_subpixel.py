@@ -25,6 +25,7 @@ from pathlib import Path
 
 @torch.no_grad()
 class Val_model_subpixel(object):
+    """Validate a subpixel regression network on extracted patches."""
     def __init__(self, config, device='cpu', verbose=False):
         self.config = config
         self.model = self.config['name']
@@ -35,6 +36,7 @@ class Val_model_subpixel(object):
 
 
     def loadModel(self):
+        """Load a pretrained subpixel model for inference."""
         # model = 'SuperPointNet'
         # params = self.config['model']['subpixel']['params']
         from utils.loader import modelLoader
@@ -64,12 +66,20 @@ class Val_model_subpixel(object):
         pass
 
     def run(self, patches):
-        """
+        """Infer subpixel offsets for the provided patches.
 
+        Parameters
+        ----------
+        patches : torch.Tensor
+            Patch tensor of shape ``[N, 1, H, W]``.
 
+        Returns
+        -------
+        torch.Tensor
+            Predicted offsets with shape ``[N, 2]``.
         """
         with torch.no_grad():
-            pred_res = self.net(patches)
+            pred_res = self.net(patches)  # [N, 2] offsets
         return pred_res
         pass
 

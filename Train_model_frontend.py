@@ -54,9 +54,12 @@ def img_overlap(img_r, img_g, img_gray):  # img_b repeat
 
 
 class Train_model_frontend(object):
-    """
-    # This is the base class for training classes. Wrap pytorch net to help training process.
-    
+    """Base class providing utilities for training networks.
+
+    It sets up experiment configuration and exposes ``self.net`` and
+    ``self.optimizer`` to subclasses.  Common attributes such as
+    ``self.device``, ``self.cell_size`` and ``self.max_iter`` are initialized
+    here.
     """
 
     default_config = {
@@ -186,11 +189,7 @@ class Train_model_frontend(object):
         return optimizer
 
     def loadModel(self):
-        """
-        load model from name and params
-        init or load optimizer
-        :return:
-        """
+        """Instantiate network and optimizer and optionally load weights."""
         model = self.config["model"]["name"]
         params = self.config["model"]["params"]
         if self.num_segmentation_classes > 0 and "num_classes" not in params:
@@ -360,13 +359,7 @@ class Train_model_frontend(object):
         return loss
 
     def train_val_sample(self, sample, n_iter=0, train=False):
-        """
-        # deprecated: default train_val_sample
-        :param sample:
-        :param n_iter:
-        :param train:
-        :return:
-        """
+        """Default single-sample training loop used by subclasses."""
         task = "train" if train else "val"
         tb_interval = self.config["tensorboard_interval"]
 
