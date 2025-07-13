@@ -30,6 +30,12 @@ from models.model_wrap import SuperPointFrontend_torch
 
 @torch.no_grad()
 class Val_model_heatmap(SuperPointFrontend_torch):
+    """Validation helper producing heatmaps from trained models.
+
+    Attributes such as ``nms_dist`` and ``conf_thresh`` mirror the training
+    configuration.  The loaded network is stored in ``self.net`` after calling
+    :py:meth:`loadModel`.
+    """
     def __init__(self, config, device='cpu', verbose=False):
         self.config = config
         self.model = self.config['name']
@@ -63,6 +69,7 @@ class Val_model_heatmap(SuperPointFrontend_torch):
 
 
     def loadModel(self):
+        """Load network weights and move model to the configured device."""
         # model = 'SuperPointNet'
         # params = self.config['model']['subpixel']['params']
         from utils.loader import modelLoader
@@ -110,10 +117,17 @@ class Val_model_heatmap(SuperPointFrontend_torch):
         pass
 
     def run(self, images):
-        """
-        input: 
-            images: tensor[batch(1), 1, H, W]
+        """Forward images through the network and return heatmaps.
 
+        Parameters
+        ----------
+        images : torch.Tensor
+            Input batch shaped ``[B, C, H, W]``.
+
+        Returns
+        -------
+        np.ndarray
+            Heatmap array with shape ``[B, 1, H, W]``.
         """
         from Train_model_heatmap import Train_model_heatmap
         from utils.var_dim import toNumpy
@@ -125,6 +139,7 @@ class Val_model_heatmap(SuperPointFrontend_torch):
         self.outs = outs
 
         channel = semi.shape[1]
+        # heatmap branch depends on network output dimension
         if channel == 64:
             heatmap = train_agent.flatten_64to1(semi, cell_size=self.cell_size)
         elif channel == 65:
