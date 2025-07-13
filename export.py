@@ -49,7 +49,25 @@ from settings import EXPER_PATH
 
 
 def combine_heatmap(heatmap, inv_homographies, mask_2D, device="cpu"):
-    ## multiply heatmap with mask_2D
+    """Warp and aggregate heatmaps using inverse homographies.
+
+    Parameters
+    ----------
+    heatmap : torch.Tensor
+        Dense detection heatmap of shape ``(N, 1, H, W)``.
+    inv_homographies : torch.Tensor
+        Inverse homography matrices of shape ``(1, N, 3, 3)``.
+    mask_2D : torch.Tensor
+        Valid mask corresponding to ``heatmap`` of shape ``(N, 1, H, W)``.
+    device : str, optional
+        Torch device used for warping operations.
+
+    Returns
+    -------
+    torch.Tensor
+        Averaged heatmap after warping to a common reference frame.
+    """
+    # restrict predictions to valid pixels
     heatmap = heatmap * mask_2D
 
     heatmap = inv_warp_image_batch(
@@ -70,18 +88,26 @@ def combine_heatmap(heatmap, inv_homographies, mask_2D, device="cpu"):
 
 
 def export_descriptor(config, output_dir, args):
-    """
-    # input 2 images, output keypoints and correspondence
-    save prediction:
-        pred:
-            'image': np(320,240)
-            'prob' (keypoints): np (N1, 2)
-            'desc': np (N2, 256)
-            'warped_image': np(320,240)
-            'warped_prob' (keypoints): np (N2, 2)
-            'warped_desc': np (N2, 256)
-            'homography': np (3,3)
-            'matches': np [N3, 4]
+    """Export descriptors and correspondences for image pairs.
+
+    Parameters
+    ----------
+    config : dict
+        Experiment configuration dictionary.
+    output_dir : str
+        Path to the directory where results will be stored.
+    args : argparse.Namespace
+        Additional command line arguments.
+
+    Returns
+    -------
+    None
+        Results are written to ``output_dir`` and logged via TensorBoard.
+
+    Notes
+    -----
+    Each prediction file contains keys like ``image``, ``prob``, ``desc`` and
+    potentially ``matches`` when homographies are available.
     """
     from utils.loader import get_save_path
     from utils.var_dim import squeezeToNumpy
@@ -128,9 +154,22 @@ def export_descriptor(config, output_dir, args):
         # first image, no matches
         # img = img_0
         def get_pts_desc_from_agent(val_agent, img, device="cpu"):
-            """
-            pts: list [numpy (3, N)]
-            desc: list [numpy (256, N)]
+            """Run the network on ``img`` and return keypoints and descriptors.
+
+            Parameters
+            ----------
+            val_agent : models.model_wrap.SuperPointFrontend_torch
+                Initialized evaluation network.
+            img : torch.Tensor
+                Input image tensor.
+            device : str, optional
+                Device used for inference.
+
+            Returns
+            -------
+            dict
+                Dictionary with ``pts`` (``(3, N)`` array of [x, y, prob]) and
+                ``desc`` (``(256, N)`` descriptor matrix).
             """
             heatmap_batch = val_agent.run(
                 img.to(device)
@@ -148,6 +187,7 @@ def export_descriptor(config, output_dir, args):
             return outs
 
         def transpose_np_dict(outs):
+            """Transpose every numpy array stored in ``outs`` in-place."""
             for entry in list(outs):
                 outs[entry] = outs[entry].transpose()
 
@@ -270,6 +310,7 @@ def export_descriptor(config, output_dir, args):
             )
 
             def draw_corr(img_a, img_b, pts_a, pts_b):
+                """Create an RGB visualization of correspondences."""
                 h1, w1 = img_a.shape
                 h2, w2 = img_b.shape
                 canvas = np.zeros((max(h1, h2), w1 + w2, 3), dtype=np.uint8)
@@ -354,11 +395,26 @@ def export_descriptor(config, output_dir, args):
 
 @torch.no_grad()
 def export_detector_homoAdapt_gpu(config, output_dir, args):
-    """
-    input 1 images, output pseudo ground truth by homography adaptation.
-    Save labels:
-        pred:
-            'prob' (keypoints): np (N1, 3)
+    """Generate pseudo ground truth detections via homography adaptation.
+
+    Parameters
+    ----------
+    config : dict
+        Experiment configuration.
+    output_dir : str
+        Directory where outputs and checkpoints will be stored.
+    args : argparse.Namespace
+        Parsed command line arguments.
+
+    Returns
+    -------
+    None
+        Keypoint detections are saved to ``output_dir``.
+
+    Notes
+    -----
+    A series of random homographies are applied to each input image. The
+    resulting detections are merged to produce more robust labels.
     """
     from utils.utils import pltImshow
     from utils.utils import saveImg
@@ -433,6 +489,7 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
         raise
 
     def load_as_float(path):
+        """Load an image as ``float32`` normalized to ``[0, 1]``."""
         return imread(path).astype(np.float32) / 255
 
     tracker = PointTracker(max_length, nn_thresh=fe.nn_thresh)
