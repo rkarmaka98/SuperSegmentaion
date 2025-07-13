@@ -57,9 +57,36 @@ def keep_shared_points(keypoint_map, H, keep_k_points=1000):
 
     return keypoints.astype(int)
 
-def compute_homography(data, keep_k_points=1000, correctness_thresh=3, orb=False, shape=(240,320)):
-    """
-    Compute the homography between 2 sets of detections and descriptors inside data.
+def compute_homography(data, keep_k_points=1000, correctness_thresh=3,
+                       orb=False, shape=(240, 320)):
+    """Estimate a homography from descriptor matches.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary produced by the evaluation pipeline containing ``prob``,
+        ``warped_prob``, ``desc``, ``warped_desc`` and the ground truth
+        ``homography``.
+    keep_k_points : int, optional
+        Maximum number of keypoints used for the estimation.
+    correctness_thresh : int, optional
+        Threshold in pixels for considering the estimated homography correct.
+    orb : bool, optional
+        If ``True`` the descriptors are interpreted as ORB descriptors and
+        matched using the Hamming distance. Otherwise L2 distance is used.
+    shape : tuple, optional
+        Shape ``(H, W)`` of the original image. Used for corner error
+        computation.
+
+    Returns
+    -------
+    dict
+        Dictionary with the computed homography, boolean correctness flag,
+        inlier mask and match information.
+
+    The function performs nearest neighbour matching between descriptors,
+    estimates the homography with RANSAC and finally evaluates how close the
+    predicted homography is to the ground truth one.
     """
     # shape = data['prob'].shape
     print("shape: ", shape)
@@ -90,12 +117,15 @@ def compute_homography(data, keep_k_points=1000, correctness_thresh=3, orb=False
         bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
     print("desc: ", desc.shape)
     print("w desc: ", warped_desc.shape)
+    # Perform brute force matching between descriptors
     cv2_matches = bf.match(desc, warped_desc)
     matches_idx = np.array([m.queryIdx for m in cv2_matches])
     m_keypoints = keypoints[matches_idx, :]
     matches_idx = np.array([m.trainIdx for m in cv2_matches])
+    # Distance between matched descriptors (lower is better)
     m_dist = np.array([m.distance for m in cv2_matches])
     m_warped_keypoints = warped_keypoints[matches_idx, :]
+    # Store matches as (y, x) coordinates to be consistent with other code
     matches = np.hstack((m_keypoints[:, [1, 0]], m_warped_keypoints[:, [1, 0]]))
     print(f"matches: {matches.shape}")
     # get_matches()
@@ -112,6 +142,7 @@ def compute_homography(data, keep_k_points=1000, correctness_thresh=3, orb=False
     # at least four correspondences, otherwise it raises an exception. The
     # original code did not check for this which caused a crash during
     # evaluation when few matches were found.
+    # OpenCV requires at least 4 correspondences to estimate a homography
     if m_keypoints.shape[0] >= 4 and m_warped_keypoints.shape[0] >= 4:
         H, inliers = cv2.findHomography(m_keypoints[:, [1, 0]],
                                         m_warped_keypoints[:, [1, 0]],
@@ -156,8 +187,10 @@ def compute_homography(data, keep_k_points=1000, correctness_thresh=3, orb=False
         warped_corners = warped_corners[:, :2] / warped_corners[:, 2:]
         print("warped_corners: ", warped_corners)
         
-        mean_dist = np.mean(np.linalg.norm(real_warped_corners - warped_corners, axis=1))
-        # correctness = float(mean_dist <= correctness_thresh)
+        mean_dist = np.mean(np.linalg.norm(real_warped_corners - warped_corners,
+                                           axis=1))
+        # The estimation is considered correct if the average corner error is
+        # below the threshold
         correctness = mean_dist <= correctness_thresh
 
     return {'correctness': correctness,
@@ -165,7 +198,8 @@ def compute_homography(data, keep_k_points=1000, correctness_thresh=3, orb=False
             'keypoints2': warped_keypoints,
             'matches': matches,  # cv2.match
             'cv2_matches': cv2_matches,
-            'mscores': m_dist/(m_dist.max()), # normalized distance
+            # Normalize descriptor distances to the range [0, 1]
+            'mscores': m_dist / (m_dist.max()),
             'inliers': inliers,
             'homography': H,
             'mean_dist': mean_dist
@@ -176,11 +210,29 @@ def compute_homography(data, keep_k_points=1000, correctness_thresh=3, orb=False
 
 def homography_estimation(exper_name, keep_k_points=1000,
                           correctness_thresh=3, orb=False):
-    """
-    Estimates the homography between two images given the predictions.
-    The experiment must contain in its output the prediction on 2 images, an original
-    image and a warped version of it, plus the homography linking the 2 images.
-    Outputs the correctness score.
+    """Compute the mean homography correctness for a set of predictions.
+
+    Parameters
+    ----------
+    exper_name : str
+        Name of the experiment folder under ``EXPER_PATH/outputs``.
+    keep_k_points : int, optional
+        Maximum number of keypoints kept from each image when estimating the
+        homography.
+    correctness_thresh : int, optional
+        Pixel threshold used to decide if a homography estimate is correct.
+    orb : bool, optional
+        Passed through to :func:`compute_homography` to select the descriptor
+        matching metric.
+
+    Returns
+    -------
+    float
+        Average correctness over all image pairs of the experiment.
+
+    The function iterates over the saved predictions, estimates the homography
+    for each pair using :func:`compute_homography` and averages the correctness
+    indicator.
     """
     paths = get_paths(exper_name)
     correctness = []
