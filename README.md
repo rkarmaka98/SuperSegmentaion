@@ -23,6 +23,10 @@ This repo is a bi-product of our paper [deepFEPE(IROS 2020)](https://github.com/
 - The evaluation is done under our evaluation scripts.
 - COCO/ KITTI pretrained model is included in this repo.
 
+## Design Overview
+For a high-level description of the main modules and their interactions,
+see [design_overview](docs/design_overview.md).
+
 
 ## Installation
 ### Requirements
