@@ -1,5 +1,11 @@
-"""Training script
-This is the training script for superpoint detector and descriptor.
+"""SuperPoint training entry script.
+
+This module exposes command line interfaces for launching different
+training modes of the SuperPoint detector and descriptor. It relies on
+YAML configuration files that describe datasets, models and training
+parameters. The script sets up the data pipelines, initializes the
+training agent defined by the configuration and starts the training
+loop.
 
 Author: You-Yi Jau, Rui Zhu
 Date: 2019/12/12
@@ -27,6 +33,7 @@ from utils.custom_logging import *
 
 ###### util functions ######
 def datasize(train_loader, config, tag='train'):
+    """Log the number of samples and batches for a data loader."""
     logging.info('== %s split size %d in %d batches'%\
     (tag, len(train_loader)*config['model']['batch_size'], len(train_loader)))
     pass
@@ -38,6 +45,11 @@ from utils.loader import get_save_path
 
 ###### train script ######
 def train_base(config, output_dir, args):
+    """Entry point for base training.
+
+    This simply forwards all arguments to :func:`train_joint` so that the
+    same training logic is shared between different command names.
+    """
     return train_joint(config, output_dir, args)
     pass
 
@@ -45,6 +57,13 @@ def train_base(config, output_dir, args):
 #     pass
 
 def train_joint(config, output_dir, args):
+    """Run joint training as specified in the configuration.
+
+    Args:
+        config (dict): YAML configuration dictionary.
+        output_dir (str): Directory where training artifacts are saved.
+        args (argparse.Namespace): Parsed command line arguments.
+    """
     assert 'train_iter' in config
 
     # config
@@ -97,6 +116,9 @@ def train_joint(config, output_dir, args):
         pass
 
 if __name__ == '__main__':
+    # Command line usage:
+    #     python train4.py train_joint config.yaml EXPER_NAME [--eval] [--debug]
+    # "train_base" invokes the same routine as ``train_joint``.
     # global var
     torch.set_default_tensor_type(torch.FloatTensor)
     logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
@@ -125,6 +147,8 @@ if __name__ == '__main__':
     p_train.set_defaults(func=train_joint)
 
     args = parser.parse_args()
+    # Parsed arguments determine which training routine to run via
+    # ``args.func`` set above.
 
     if args.debug:
         logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
@@ -132,7 +156,7 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
-    # EXPER_PATH from settings.py
+    # EXPER_PATH from settings.py defines where experiments are stored
     output_dir = os.path.join(EXPER_PATH, args.exper_name)
     os.makedirs(output_dir, exist_ok=True)
 
