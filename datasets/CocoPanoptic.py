@@ -28,6 +28,19 @@ class CocoPanoptic(Coco):
     })
 
     def __init__(self, export=False, transform=None, task='train', **config):
+        """Initialize the dataset with optional panoptic annotations.
+
+        Parameters
+        ----------
+        export : bool
+            When ``True`` the loader behaves as in descriptor export mode.
+        transform : callable, optional
+            Optional preprocessing applied to each image.
+        task : str
+            ``"train"`` or ``"val"`` subset to load.
+        **config : dict
+            Additional configuration overriding :attr:`default_config`.
+        """
         # turn off instance masks when panoptic segmentation is requested
         if config.get('load_panoptic'):
             config['load_segmentation'] = False
@@ -71,6 +84,7 @@ class CocoPanoptic(Coco):
                     logging.warning('Panoptic annotation file not found: %s', ann_file)
 
     def __getitem__(self, index):
+        """Return sample with optional panoptic segmentation mask."""
         # get sample from base class
         input_dict = super().__getitem__(index)
 
@@ -85,6 +99,7 @@ class CocoPanoptic(Coco):
                 if pan_path.exists():
                     pan_img = cv2.imread(str(pan_path), cv2.IMREAD_COLOR)
                     pan_img = cv2.cvtColor(pan_img, cv2.COLOR_BGR2RGB)
+                    # convert RGB panoptic labels to segment ids
                     seg_ids = rgb2id(pan_img)
                     cat_map = np.zeros_like(seg_ids, dtype=np.int32)
                     mapping = self.panoptic_segments.get(image_name, {})
@@ -111,6 +126,7 @@ class CocoPanoptic(Coco):
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
                 if cs34_path.exists():
                     seg_img = cv2.imread(str(cs34_path), cv2.IMREAD_GRAYSCALE)
+                    # CS-34 masks already store category ids as grayscale values
                     seg_img = cv2.resize(seg_img, (W, H), interpolation=cv2.INTER_NEAREST)
                     seg_mask = torch.tensor(seg_img, dtype=torch.long)
                     num_cls = self.config.get('num_segmentation_classes', 0)

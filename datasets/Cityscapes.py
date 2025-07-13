@@ -62,7 +62,18 @@ class Cityscapes(data.Dataset):
     }
 
     def __init__(self, transform=None, task='train', **config):
-        """Initialize dataset by crawling Cityscapes folders."""
+        """Initialize dataset by crawling Cityscapes folders.
+
+        Parameters
+        ----------
+        transform : callable, optional
+            Optional preprocessing applied to each image.
+        task : str, optional
+            Which split to use, either ``"train"`` or ``"val"``.
+        **config : dict
+            Additional options controlling augmentation and loading
+            behaviour. See :attr:`default_config` for details.
+        """
         self.config = dict_update(self.default_config, config)
         self.transforms = transform
         self.split = 'train' if task == 'train' else 'val'
@@ -108,6 +119,7 @@ class Cityscapes(data.Dataset):
         return len(self.samples)
 
     def __getitem__(self, index):
+        """Return processed sample at ``index`` including intrinsics."""
         sample = self.samples[index]
         img = cv2.imread(sample['image'], cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -153,7 +165,7 @@ class Cityscapes(data.Dataset):
                 logging.warning('Missing segmentation label file: %s', mask_path)
                 seg_mask = torch.zeros((H, W), dtype=torch.long)
             if self.config.get('reduce_to_4_categories', False):
-                # convert CS-34 labels to the 4-category scheme
+                # convert Cityscapes 34-class labels to the 4 broad categories
                 mask_np = seg_mask.numpy()
                 mapped = np.full_like(mask_np, 3)
                 for k, v in CS34_TO_4.items():
@@ -208,13 +220,25 @@ class Cityscapes(data.Dataset):
 
     @staticmethod
     def points_to_2D(pnts, H, W):
+        """Convert keypoint coordinates to a binary mask."""
         labels = np.zeros((H, W))
         pnts = pnts.astype(int)
         labels[pnts[:, 1], pnts[:, 0]] = 1
         return labels
 
     def gaussian_blur(self, image):
-        """Apply Gaussian blur augmentation to generate heatmaps."""
+        """Apply Gaussian blur augmentation to generate heatmaps.
+
+        Parameters
+        ----------
+        image : ndarray
+            Two dimensional array representing the input mask.
+
+        Returns
+        -------
+        ndarray
+            Blurred mask of the same shape.
+        """
         from utils.photometric import ImgAugTransform
         aug_par = {'photometric': {}}
         aug_par['photometric']['enable'] = True
