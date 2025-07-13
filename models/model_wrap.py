@@ -34,15 +34,12 @@ def toNumpy(tensor):
 
 
 class SuperPointFrontend_torch(object):
-    """ Wrapper around pytorch net to help with pre and post image processing. """
-    '''
-    * SuperPointFrontend_torch:
-    ** note: the input, output is different from that of SuperPointFrontend
-    heatmap: torch (batch_size, H, W, 1)
-    dense_desc: torch (batch_size, H, W, 256)
-    pts: [batch_size, np (N, 3)]
-    desc: [batch_size, np(256, N)]
-    '''
+    """High level interface for running SuperPoint style networks.
+
+    Handles model loading, NMS post-processing and descriptor extraction.
+    ``cell`` sets the output stride while ``device`` controls PyTorch
+    execution.
+    """
 
     def __init__(self, config, weights_path, nms_dist, conf_thresh, nn_thresh,
                  cuda=False, trained=False, device='cpu',grad=False, load=True):
@@ -70,6 +67,7 @@ class SuperPointFrontend_torch(object):
             self.loadModel(weights_path)
 
     def loadModel(self, weights_path):
+        """Load network weights from ``weights_path`` and set eval mode."""
         # Load the network in inference mode.
         if weights_path[-4:] == '.tar':
             trained = True
@@ -321,14 +319,23 @@ class SuperPointFrontend_torch(object):
         pass
 
     def run(self, inp, onlyHeatmap=False, train=True):
-        """ Process a numpy image to extract points and descriptors.
-        Input
-          img - HxW tensor float32 input image in range [0,1].
-        Output
-          corners - 3xN numpy array with corners [x_i, y_i, confidence_i]^T.
-          desc - 256xN numpy array of corresponding unit normalized descriptors.
-          heatmap - HxW numpy heatmap in range [0,1] of point confidences.
-          """
+        """Run a forward pass and optionally return keypoints and descriptors.
+
+        Parameters
+        ----------
+        inp : torch.Tensor
+            Input batch ``[B, 1, H, W]`` normalized to [0, 1].
+        onlyHeatmap : bool, default ``False``
+            If ``True``, return only the detector heatmap.
+        train : bool, default ``True``
+            Toggle gradient computation.
+
+        Returns
+        -------
+        tuple or torch.Tensor
+            Depending on ``onlyHeatmap`` either a heatmap tensor or a tuple
+            ``(pts, descriptors, dense_desc, heatmap)``.
+        """
         # assert img.ndim == 2, 'Image must be grayscale.'
         # assert img.dtype == np.float32, 'Image must be float32.'
         # H, W = img.shape[0], img.shape[1]
@@ -338,7 +345,7 @@ class SuperPointFrontend_torch(object):
         # inp = torch.autograd.Variable(inp).view(1, 1, H, W)
         # if self.cuda:
         inp = inp.to(self.device)
-        batch_size, H, W = inp.shape[0], inp.shape[2], inp.shape[3]
+        batch_size, H, W = inp.shape[0], inp.shape[2], inp.shape[3]  # BxCxHxW
         if train:
             # outs = self.net.forward(inp, subpixel=self.subpixel)
             outs = self.net.forward(inp)
@@ -391,7 +398,9 @@ class SuperPointFrontend_torch(object):
             tensor (batch_size, 256, H, W)
         '''
         # m = nn.Upsample(scale_factor=(1, self.cell, self.cell), mode='bilinear')
-        dense_desc = nn.functional.interpolate(coarse_desc, scale_factor=(self.cell, self.cell), mode='bilinear')
+        dense_desc = nn.functional.interpolate(
+            coarse_desc, scale_factor=(self.cell, self.cell), mode="bilinear"
+        )  # [B,256,H,W]
         # norm the descriptor
         def norm_desc(desc):
             dn = torch.norm(desc, p=2, dim=1) # Compute the norm.
