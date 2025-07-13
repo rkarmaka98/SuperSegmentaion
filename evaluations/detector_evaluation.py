@@ -13,8 +13,30 @@ def get_paths(exper_name):
 
 
 def compute_tp_fp(data, remove_zero=1e-4, distance_thresh=2, simplified=False):
-    """
-    Compute the true and false positive rates.
+    """Calculate true/false positives for a detector prediction.
+
+    Parameters
+    ----------
+    data : dict
+        ``npz`` file loaded as a dictionary containing ``keypoint_map`` and the
+        predicted probability map ``prob`` or ``prob_nms``.
+    remove_zero : float, optional
+        Probability threshold below which detections are ignored.
+    distance_thresh : int, optional
+        Maximum pixel distance for a detection to match a ground truth point.
+    simplified : bool, optional
+        If ``True`` allows multiple detections to match the same ground truth
+        point. This mimics the simplified protocol of some benchmarks.
+
+    Returns
+    -------
+    tuple
+        ``tp`` (array of bool), ``fp`` (array of bool), ``prob`` (array of
+        float) and ``n_gt`` (int) containing the number of ground truth points.
+
+    The function filters low confidence predictions, matches them to ground
+    truth keypoints within ``distance_thresh`` and returns per-detection TP/FP
+    indicators.
     """
     # Read data
     gt = np.where(data['keypoint_map'])
@@ -22,28 +44,32 @@ def compute_tp_fp(data, remove_zero=1e-4, distance_thresh=2, simplified=False):
     n_gt = len(gt)
     prob = data['prob_nms'] if 'prob_nms' in data.files else data['prob']
 
-    # Filter out predictions with near-zero probability
+    # Filter out detections with probability almost zero
     mask = np.where(prob > remove_zero)
     prob = prob[mask]
     pred = np.array(mask).T
 
     # When several detections match the same ground truth point, only pick
     # the one with the highest score  (the others are false positive)
+    # Sort predictions by confidence
     sort_idx = np.argsort(prob)[::-1]
     prob = prob[sort_idx]
     pred = pred[sort_idx]
 
+    # Compute pairwise distances between predictions and GT
     diff = np.expand_dims(pred, axis=1) - np.expand_dims(gt, axis=0)
     dist = np.linalg.norm(diff, axis=-1)
     matches = np.less_equal(dist, distance_thresh)
 
     tp = []
+    # Keep track of which GT points have already been matched
     matched = np.zeros(len(gt))
     for m in matches:
         correct = np.any(m)
         if correct:
             gt_idx = np.argmax(m)
             tp.append(not matched[gt_idx])
+            # Do not count multiple detections for the same GT
             matched[gt_idx] = 1
         else:
             tp.append(False)
@@ -149,10 +175,29 @@ def warp_keypoints(keypoints, H):
 
 def compute_repeatability(data, keep_k_points=300,
                           distance_thresh=3, verbose=False):
-    """
-    Compute the repeatability. The experiment must contain in its output the prediction
-    on 2 images, an original image and a warped version of it, plus the homography
-    linking the 2 images.
+    """Measure detector repeatability for an image pair.
+
+    Parameters
+    ----------
+    data : dict
+        Loaded ``npz`` prediction containing ``prob``, ``warped_prob``, the
+        corresponding images and the ground truth ``homography``.
+    keep_k_points : int, optional
+        Maximum number of keypoints retained from each image for evaluation.
+    distance_thresh : int, optional
+        Pixel threshold to consider two detections as a match.
+    verbose : bool, optional
+        If ``True`` prints additional statistics.
+
+    Returns
+    -------
+    tuple
+        ``repeatability`` (float) and ``localization_err`` (float) which is the
+        average localization error of matched points.
+
+    The function warps keypoints from the reference image with the ground truth
+    homography, keeps only those falling inside the second image and counts how
+    many points are mutually matched within ``distance_thresh``.
     """
 
     def filter_keypoints(points, shape):
@@ -222,9 +267,9 @@ def compute_repeatability(data, keep_k_points=300,
     warped_keypoints = keep_true_keypoints(warped_keypoints, np.linalg.inv(H),
                                            data['image'].shape)
 
-    # Warp the original keypoints with the true homography
+    # Warp the original keypoints with the ground truth homography
     true_warped_keypoints = keypoints
-    # true_warped_keypoints[:,:2] = warp_keypoints(keypoints[:, [1, 0]], H)
+    # Convert to (x, y) before warping
     true_warped_keypoints[:,:2] = warp_keypoints(keypoints[:, :2], H) # make sure the input fits the (x,y)
     # true_warped_keypoints = np.stack([true_warped_keypoints[:, 1],
     #                                   true_warped_keypoints[:, 0],
@@ -244,7 +289,7 @@ def compute_repeatability(data, keep_k_points=300,
     N2s.append(N2)
     true_warped_keypoints = np.expand_dims(true_warped_keypoints, 1)
     warped_keypoints = np.expand_dims(warped_keypoints, 0)
-    # shapes are broadcasted to N1 x N2 x 2:
+    # Broadcast to N1 x N2 x 2 to compute pairwise distances
     norm = np.linalg.norm(true_warped_keypoints - warped_keypoints,
                           ord=None, axis=2)
     count1 = 0
