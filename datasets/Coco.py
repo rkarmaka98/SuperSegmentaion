@@ -61,6 +61,21 @@ class Coco(data.Dataset):
     }
 
     def __init__(self, export=False, transform=None, task='train', **config):
+        """Initialize the COCO dataset loader.
+
+        Parameters
+        ----------
+        export : bool, optional
+            Flag used when exporting descriptors. Affects homography
+            adaptation behaviour.
+        transform : callable, optional
+            Optional preprocessing to apply to images.
+        task : str, optional
+            Either ``"train"`` or ``"val"`` to select the corresponding
+            subset.
+        **config : dict
+            Configuration dictionary overriding :attr:`default_config`.
+        """
 
         # Update config
         self.config = self.default_config
@@ -158,6 +173,20 @@ class Coco(data.Dataset):
         pass
 
     def putGaussianMaps(self, center, accumulate_confid_map):
+        """Draw a Gaussian peak at ``center`` on the heatmap.
+
+        Parameters
+        ----------
+        center : tuple(float, float)
+            Pixel coordinates ``(x, y)`` at which to place the Gaussian.
+        accumulate_confid_map : ndarray
+            Array that accumulates the Gaussian contributions.
+
+        Returns
+        -------
+        ndarray
+            Updated heatmap with the new Gaussian applied.
+        """
         crop_size_y = self.params_transform['crop_size_y']
         crop_size_x = self.params_transform['crop_size_x']
         stride = self.params_transform['stride']
@@ -185,12 +214,12 @@ class Coco(data.Dataset):
         return sample
 
     def __getitem__(self, index):
-        '''
+        """Load image and optional annotations for ``index``.
 
-        :param index:
-        :return:
-            image: tensor (H, W, channel=1)
-        '''
+        Returns a dictionary containing the processed image under the
+        ``"image"`` key. When ``load_segmentation`` is enabled a
+        ``segmentation_mask`` tensor is also provided.
+        """
         def _read_image(path):
             cell = 8
             input_image = cv2.imread(path)
@@ -475,10 +504,17 @@ class Coco(data.Dataset):
 
     ## util functions
     def gaussian_blur(self, image):
-        """
-        image: np [H, W]
-        return:
-            blurred_image: np [H, W]
+        """Apply the photometric augmentation pipeline as a blur operator.
+
+        Parameters
+        ----------
+        image : ndarray
+            2-D array with shape ``(H, W)`` to be blurred.
+
+        Returns
+        -------
+        ndarray
+            Blurred image with the same shape as the input.
         """
         aug_par = {'photometric': {}}
         aug_par['photometric']['enable'] = True
