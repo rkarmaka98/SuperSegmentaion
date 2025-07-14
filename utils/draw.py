@@ -278,3 +278,38 @@ def draw_homography_grid(img, H, spacing=32):
 
     return overlay
 
+
+def warp_to_canvas(img, H, out_size):
+    """Warp ``img`` by ``H`` and place it on a blank canvas.
+
+    Parameters
+    ----------
+    img : ``numpy.ndarray``
+        Single image, either grayscale ``(H, W)`` or color ``(H, W, 3)``.
+    H : ``numpy.ndarray``
+        ``3×3`` homography matrix used for projection.
+    out_size : tuple
+        Size of the output canvas given as ``(width, height)``.
+
+    Returns
+    -------
+    ``numpy.ndarray``
+        Zero initialised canvas with the warped image drawn on it.
+    """
+
+    # OpenCV expects the size as (width, height)
+    w, h = out_size
+    # warp the input image according to the given homography
+    warped = cv2.warpPerspective(img, H, (w, h))
+
+    # ensure the canvas has a channel dimension
+    if warped.ndim == 2:
+        canvas = np.zeros((h, w), dtype=img.dtype)
+    else:
+        canvas = np.zeros((h, w, warped.shape[2]), dtype=img.dtype)
+
+    # copy warped image onto the blank canvas
+    canvas[:warped.shape[0], :warped.shape[1]] = warped
+
+    return canvas
+

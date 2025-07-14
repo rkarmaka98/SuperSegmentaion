@@ -319,8 +319,21 @@ python evaluation.py logs/sift_test/predictions --sift --repeatibility --homogra
 ```shell
 # show images saved in the folders
 jupyter notebook
-notebooks/visualize_hpatches.ipynb 
+notebooks/visualize_hpatches.ipynb
 ```
+
+## Debugging
+Use `utils.draw.warp_to_canvas` to visualise how a homography projects an
+image beyond its original boundaries. The helper wraps `cv2.warpPerspective`
+and draws the result on a blank canvas.
+
+```python
+from utils.draw import warp_to_canvas
+canvas = warp_to_canvas(img, H, out_size=(640, 480))
+```
+
+Run `python test/visualize_warping.py path/to/npz --canvas-size 640 480` to
+save an example visualization.
 
 ## Updates (year.month.day)
 - 2020.08.05: 
