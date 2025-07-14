@@ -362,22 +362,6 @@ def evaluate(args, **options):
         # homography = data['homography']
         real_H = data['homography']
         image = data['image']
-        # gracefully handle missing or empty warped images
-        if 'warped_image' in data.files:
-            warped_image = data['warped_image']
-        else:
-            warped_image = None
-
-        if warped_image is None or not np.any(warped_image):
-            try:
-                warped_image = cv2.warpPerspective(
-                    image,
-                    real_H,
-                    (image.shape[1], image.shape[0]),
-                )
-            except Exception as e:
-                logging.warning(f"Failed to compute warped image for {f}: {e}")
-                warped_image = np.zeros_like(image)
         keypoints = data['prob'][:, [1, 0]]
         print("keypoints: ", keypoints[:3,:])
         warped_keypoints = data['warped_prob'][:, [1, 0]]
