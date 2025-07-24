@@ -53,8 +53,8 @@ model:
     }    
     batch_size: 8
     eval_batch_size: 8
-    detection_threshold: 0.0005 # 0.015
-    nms: 1
+    detection_threshold: 0.005 # 0.015
+    nms: 2
     top_k: 4096
     subpixel:
         enable: true

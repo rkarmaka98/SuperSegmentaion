@@ -349,6 +349,7 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
     src_pixel_coords = src_pixel_coords.float()
     src_pixel_coords[..., 0] = src_pixel_coords[..., 0] / (W - 1) * 2 - 1  # x
     src_pixel_coords[..., 1] = src_pixel_coords[..., 1] / (H - 1) * 2 - 1  # y
+    src_pixel_coords = torch.clamp(src_pixel_coords, -1.0, 1.0)
 
     warped_img = F.grid_sample(img, src_pixel_coords, mode=mode, align_corners=True)
     print("[src_pixel_coords:]",src_pixel_coords.min(), src_pixel_coords.max())
