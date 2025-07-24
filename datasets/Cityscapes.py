@@ -193,6 +193,7 @@ class Cityscapes(data.Dataset):
             margin = self.config['warped_pair'].get('valid_border_margin', 0)
             valid_mask = compute_valid_mask(torch.tensor([H, W]), H_inv_mat, erosion_radius=margin)
             output['warped_valid_mask'] = valid_mask
+            print('[compute_valid_mask] sum:', valid_mask.sum().item(), 'min/max:', valid_mask.min().item(), valid_mask.max().item())
 
             # warp keypoint labels when available
             if self.labels:

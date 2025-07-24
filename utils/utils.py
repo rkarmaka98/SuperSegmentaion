@@ -267,10 +267,17 @@ def homography_scaling(homography, H, W):
     homography = np.linalg.inv(trans) @ homography @ trans
     return homography
 
-def homography_scaling_torch(homography, H, W):
-    trans = torch.tensor([[2./W, 0., -1], [0., 2./H, -1], [0., 0., 1.]])
-    homography = (trans.inverse() @ homography @ trans)
-    return homography
+def homography_scaling_torch(homography, H, W, align_corners = True):
+    denom_w = (W - 1) if align_corners else W
+    denom_h = (H - 1) if align_corners else H
+
+    T = torch.tensor([[2.0 / denom_w, 0., -1.0],
+                      [0., 2.0 / denom_h, -1.0],
+                      [0., 0., 1.0]],
+                     dtype=homography.dtype,
+                     device=homography.device)
+
+    return T @ homography @ T.inverse()
 
 def filter_points(points, shape, return_mask=False):
     ### check!
@@ -349,10 +356,10 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
     src_pixel_coords = src_pixel_coords.float()
     src_pixel_coords[..., 0] = src_pixel_coords[..., 0] / (W - 1) * 2 - 1  # x
     src_pixel_coords[..., 1] = src_pixel_coords[..., 1] / (H - 1) * 2 - 1  # y
-    src_pixel_coords = torch.clamp(src_pixel_coords, -1.0, 1.0)
+    src_pixel_coords = torch.clamp(src_pixel_coords, -1.1, 1.1)
 
     warped_img = F.grid_sample(img, src_pixel_coords, mode=mode, align_corners=True)
-    print("[src_pixel_coords:]",src_pixel_coords.min(), src_pixel_coords.max())
+    # print("[src_pixel_coords:]",src_pixel_coords.min(), src_pixel_coords.max())
     return warped_img
 
 def inv_warp_image(img, mat_homo_inv, device='cpu', mode='bilinear'):
@@ -698,13 +705,18 @@ def compute_valid_mask(image_shape, inv_homography, device='cpu', erosion_radius
         inv_homography = inv_homography.view(-1, 3, 3)
     batch_size = inv_homography.shape[0]
     mask = torch.ones(batch_size, 1, image_shape[0], image_shape[1]).to(device)
+    # print('[mask step-0] sum', mask.sum().item())
     mask = inv_warp_image_batch(mask, inv_homography, device=device, mode='nearest')
+    # print('[mask step-1] after warp  sum', mask.sum().item(),
+    #   'NaN?', torch.isnan(mask).any().item())
     mask = mask.view(batch_size, image_shape[0], image_shape[1])
+    # print('[mask step-2] view  sum', mask.sum().item())
     mask = mask.cpu().numpy()
     if erosion_radius > 0:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (erosion_radius*2,)*2)
         for i in range(batch_size):
             mask[i, :, :] = cv2.erode(mask[i, :, :], kernel, iterations=1)
+            # print('[mask step-3] after erosion sum', mask.sum().item())
 
     return torch.tensor(mask).to(device)
 

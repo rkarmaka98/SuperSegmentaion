@@ -60,6 +60,8 @@ def combine_heatmap(heatmap, inv_homographies, mask_2D, device="cpu"):
     mask_2D = inv_warp_image_batch(
         mask_2D, inv_homographies[0, :, :, :], device=device, mode="bilinear"
     )
+    print('mask_2D sum:', mask_2D.sum().item(), ' unique:', mask_2D.unique())
+    print('inv_H stats:', inv_homographies.min().item(), inv_homographies.max().item())
     heatmap = torch.sum(heatmap, dim=0)
     mask_2D = torch.sum(mask_2D, dim=0)
     return heatmap / mask_2D
@@ -441,7 +443,7 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
 
     ## loop through all images
     for i, sample in tqdm(enumerate(test_loader)):
-        img, mask_2D = sample["image"], sample["warped_valid_mask"]
+        img, mask_2D = sample["image"], sample["warped_valid_mask"].unsqueeze(1).float()
         img = img.transpose(0, 1)
         img_2D = sample["image_2D"].numpy().squeeze()
         mask_2D = mask_2D.transpose(0, 1)
