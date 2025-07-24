@@ -482,28 +482,28 @@ class Train_model_heatmap(Train_model_frontend):
                 "original",
             )
 
+            update_overlap(
+                self.images_dict,
+                labels_2D,
+                toNumpy(heatmap_org),
+                img,
+                "original_heatmap",
+            )
+            if if_warp:
                 update_overlap(
                     self.images_dict,
-                    labels_2D,
-                    toNumpy(heatmap_org),
-                    img,
-                    "original_heatmap",
+                    labels_warp_2D,
+                    heatmap_warp_nms_batch[np.newaxis, ...],
+                    img_warp,
+                    "warped",
                 )
-                if if_warp:
-                    update_overlap(
-                        self.images_dict,
-                        labels_warp_2D,
-                        heatmap_warp_nms_batch[np.newaxis, ...],
-                        img_warp,
-                        "warped",
-                    )
-                    update_overlap(
-                        self.images_dict,
-                        labels_warp_2D,
-                        toNumpy(heatmap_warp),
-                        img_warp,
-                        "warped_heatmap",
-                    )
+                update_overlap(
+                    self.images_dict,
+                    labels_warp_2D,
+                    toNumpy(heatmap_warp),
+                    img_warp,
+                    "warped_heatmap",
+                )
 
             # visualize segmentation results if available
             if seg_pred is not None:
@@ -645,7 +645,7 @@ class Train_model_heatmap(Train_model_frontend):
 
     # tb_images_dict.update({'image': sample['image'], 'valid_mask': sample['valid_mask'],
     #     'labels_2D': sample['labels_2D'], 'warped_img': sample['warped_img'],
-    #     'warped_valid_mask': sample['warped_valid_mask']})
+    #     'valid_mask': sample['valid_mask']})
     # if self.gaussian:
     #     tb_images_dict.update({'labels_2D_gaussian': sample['labels_2D_gaussian'],
     #     'labels_2D_gaussian': sample['labels_2D_gaussian']})
