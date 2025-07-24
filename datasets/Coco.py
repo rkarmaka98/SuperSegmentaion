@@ -289,9 +289,11 @@ class Coco(data.Dataset):
         # img_aug = _preprocess(img_aug[:,:,np.newaxis])
         img_aug = torch.tensor(img_aug, dtype=torch.float32).view(-1, H, W)
 
-        valid_mask = self.compute_valid_mask(torch.tensor([H, W]), inv_homography=torch.eye(3))
         input.update({'image': img_aug})
-        input.update({'valid_mask': valid_mask})
+        input.update({
+            'warped_valid_mask': valid_mask,  # For warped image
+            'valid_mask': self.compute_valid_mask(torch.tensor([H, W]), inv_homography=torch.eye(3))  # For original image
+        })
 
         if self.coco is not None and segmentation_mask is not None:
             file_name = Path(sample['image']).name

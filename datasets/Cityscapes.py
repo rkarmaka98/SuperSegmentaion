@@ -117,6 +117,7 @@ class Cityscapes(data.Dataset):
 
         output = {
             'image': image_tensor,
+            'image_2D': image_tensor,
             'name': sample['name'],
             # scene identifier required by some export scripts
             'scene_name': sample['scene_name'],

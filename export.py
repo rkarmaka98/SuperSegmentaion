@@ -441,7 +441,7 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
 
     ## loop through all images
     for i, sample in tqdm(enumerate(test_loader)):
-        img, mask_2D = sample["image"], sample["valid_mask"]
+        img, mask_2D = sample["image"], sample["warped_valid_mask"]
         img = img.transpose(0, 1)
         img_2D = sample["image_2D"].numpy().squeeze()
         mask_2D = mask_2D.transpose(0, 1)
