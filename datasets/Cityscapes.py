@@ -45,7 +45,7 @@ class Cityscapes(data.Dataset):
         'truncate': 0,
         'load_segmentation': True,
         'preprocessing': {
-            'resize': [256, 512]
+            'resize': [240, 320]
         },
         'num_parallel_calls': 10,
         # optional random homography generation for descriptor export

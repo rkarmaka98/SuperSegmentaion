@@ -343,11 +343,15 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
     coor_cells = coor_cells.to(device)
     coor_cells = coor_cells.contiguous()
 
+    mat_homo_inv = homography_scaling_torch(mat_homo_inv, H, W)
     src_pixel_coords = warp_points(coor_cells.view([-1, 2]), mat_homo_inv, device)
     src_pixel_coords = src_pixel_coords.view([Batch, H, W, 2])
     src_pixel_coords = src_pixel_coords.float()
+    src_pixel_coords[..., 0] = src_pixel_coords[..., 0] / (W - 1) * 2 - 1  # x
+    src_pixel_coords[..., 1] = src_pixel_coords[..., 1] / (H - 1) * 2 - 1  # y
 
     warped_img = F.grid_sample(img, src_pixel_coords, mode=mode, align_corners=True)
+    print("[src_pixel_coords:]",src_pixel_coords.min(), src_pixel_coords.max())
     return warped_img
 
 def inv_warp_image(img, mat_homo_inv, device='cpu', mode='bilinear'):

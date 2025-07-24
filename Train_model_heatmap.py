@@ -239,6 +239,7 @@ class Train_model_heatmap(Train_model_frontend):
             outs = self.net(img.to(self.device))
             semi, coarse_desc = outs["semi"], outs["desc"]
             seg_pred = outs.get("segmentation")  # segmentation logits if present
+            print(semi.shape, semi.min().item(), semi.max().item())
             if if_warp:
                 outs_warp = self.net(img_warp.to(self.device))
                 semi_warp, coarse_desc_warp = outs_warp["semi"], outs_warp["desc"]

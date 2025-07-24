@@ -122,6 +122,7 @@ class Val_model_heatmap(SuperPointFrontend_torch):
         with torch.no_grad():
             outs = self.net(images)
         semi = outs['semi']
+        print(semi.shape, semi.min().item(), semi.max().item())
         self.outs = outs
 
         channel = semi.shape[1]

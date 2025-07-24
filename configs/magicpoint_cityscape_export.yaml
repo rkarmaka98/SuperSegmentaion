@@ -11,7 +11,7 @@ data:
         photometric:
             enable: false
     homography_adaptation:
-        enable: true
+        enable: false
         num: 50 # 100
         aggregation: 'sum'
         filter_counts: 0
@@ -33,7 +33,7 @@ data:
             rotation: true
             scaling: true
             perspective: true
-            scaling_amplitude: 0.05  # reduced for gentler warp
+            scaling_amplitude: 0.01  # reduced for gentler warp
             perspective_amplitude_x: 0.05  # reduced for gentler warp
             perspective_amplitude_y: 0.05  # reduced for gentler warp
             patch_ratio: 0.95  # wider valid area
@@ -53,13 +53,15 @@ model:
     }    
     batch_size: 8
     eval_batch_size: 8
-    detection_threshold: 0.015 # 0.015
-    nms: 4
-    top_k: 600
+    detection_threshold: 0.0005 # 0.015
+    nms: 1
+    top_k: 4096
     subpixel:
         enable: true
+    nn_thresh: 0.7
+    # pretrained: 'logs/magicpoint_synth20/checkpoints/superPointNet_200000_checkpoint.pth.tar' # 'SuperPointNet'
+    pretrained: 'logs/magicpoint_synth/checkpoints/superPointNet_20000_checkpoint.pth.tar' # Newer version with 100k iterations
 
-# pretrained: 'logs/magicpoint_synth20/checkpoints/superPointNet_200000_checkpoint.pth.tar' # 'SuperPointNet'
 pretrained: 'logs/magicpoint_synth/checkpoints/superPointNet_20000_checkpoint.pth.tar' # Newer version with 100k iterations
 
 

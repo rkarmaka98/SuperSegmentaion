@@ -469,13 +469,24 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
         with torch.no_grad():
             outs_all = fe.net(img)
         semi = outs_all["semi"]
+        print(
+            f"[semi] shape={tuple(semi.shape)}, "
+            f"min={semi.min().item():.4f}, "
+            f"max={semi.max().item():.4f}"
+        )
         heatmap = flattenDetection(semi, tensor=True)
+        print(
+            f"[heatmap] shape={tuple(heatmap.shape)}, "
+            f"min={heatmap.min().item():.4f}, "
+            f"max={heatmap.max().item():.4f}"
+        )
         if args.export_segmentation and "segmentation" in outs_all:
             seg_pred = outs_all["segmentation"].argmax(dim=1)
             pred_mask = seg_pred.cpu().numpy().squeeze()
         else:
             pred_mask = None
         outputs = combine_heatmap(heatmap, inv_homographies, mask_2D, device=device)
+        print("combined map stats:", outputs.min().item(), outputs.max().item())
         pts = fe.getPtsFromHeatmap(outputs.detach().cpu().squeeze())  # (x,y, prob)
 
         # subpixel prediction

@@ -378,7 +378,6 @@ class Coco(data.Dataset):
                                                     **self.config['augmentation']['homographic']['params'])
 
                 ##### use inverse from the sample homography
-                homography = inv(homography)
                 ######
 
                 inv_homography = inv(homography)
