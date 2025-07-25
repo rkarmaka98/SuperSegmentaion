@@ -320,6 +320,17 @@ def warp_points(points, homographies, device='cpu'):
     warped_points = warped_points[:, :, :2] / warped_points[:, :, 2:]
     return warped_points[0,:,:] if no_batches else warped_points
 
+def ensure_bchw(t: torch.Tensor, name: str = "img") -> torch.Tensor:
+    """Make sure `t` is [B,C,H,W]. Add missing dims if unambiguous, else fail."""
+    if t.ndim == 5:
+        return t.squeeze(0)                        # already fine
+    if t.ndim == 4:                        # already fine
+        return t
+    if t.ndim == 3:                        # assume missing batch dim
+        return t.unsqueeze(0)
+    if t.ndim == 2:                        # H×W → [1,1,H,W]  (grayscale, no batch)
+        return t.unsqueeze(0).unsqueeze(0)
+    raise ValueError(f"{name} must be 4-D [B,C,H,W], got {list(t.shape)}")
 
 # from utils.utils import inv_warp_image_batch
 def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
@@ -339,24 +350,29 @@ def inv_warp_image_batch(img, mat_homo_inv, device='cpu', mode='bilinear'):
         tensor [batch_size, 1, H, W]
     '''
     # compute inverse warped points
-    if len(img.shape) == 2 or len(img.shape) == 3:
-        img = img.view(1,1,img.shape[0], img.shape[1])
     if len(mat_homo_inv.shape) == 2:
         mat_homo_inv = mat_homo_inv.view(1,3,3)
 
+    img = ensure_bchw(img, "image")
     Batch, channel, H, W = img.shape
     coor_cells = torch.stack(torch.meshgrid(torch.linspace(-1, 1, W), torch.linspace(-1, 1, H), indexing='ij'), dim=2)
     coor_cells = coor_cells.transpose(0, 1)
     coor_cells = coor_cells.to(device)
     coor_cells = coor_cells.contiguous()
 
-    mat_homo_inv = homography_scaling_torch(mat_homo_inv, H, W)
-    src_pixel_coords = warp_points(coor_cells.view([-1, 2]), mat_homo_inv, device)
+    if mat_homo_inv.shape[0] > 1:
+        mat_homo_inv = torch.stack([homography_scaling_torch(h, H, W) for h in mat_homo_inv])
+    else:
+        mat_homo_inv = homography_scaling_torch(mat_homo_inv, H, W)
+    # Ensure coordinates are in [x, y] format for warp_points
+    coor_cells_xy = coor_cells[..., [1, 0]]
+    src_pixel_coords = warp_points(coor_cells_xy.view([-1, 2]), mat_homo_inv, device)
     src_pixel_coords = src_pixel_coords.view([Batch, H, W, 2])
     src_pixel_coords = src_pixel_coords.float()
     src_pixel_coords[..., 0] = src_pixel_coords[..., 0] / (W - 1) * 2 - 1  # x
     src_pixel_coords[..., 1] = src_pixel_coords[..., 1] / (H - 1) * 2 - 1  # y
-    src_pixel_coords = torch.clamp(src_pixel_coords, -1.1, 1.1)
+    # Clamp coordinates to [-1, 1] as required by PyTorch's grid_sample
+    src_pixel_coords = torch.clamp(src_pixel_coords, -1, 1)
 
     warped_img = F.grid_sample(img, src_pixel_coords, mode=mode, align_corners=True)
     # print("[src_pixel_coords:]",src_pixel_coords.min(), src_pixel_coords.max())

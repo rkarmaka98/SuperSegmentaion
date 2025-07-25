@@ -443,10 +443,11 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
 
     ## loop through all images
     for i, sample in tqdm(enumerate(test_loader)):
-        img, mask_2D = sample["image"], sample["warped_valid_mask"].unsqueeze(1).float()
+        img, mask_2D = sample["image"], sample["warped_valid_mask"].float()
         img = img.transpose(0, 1)
         img_2D = sample["image_2D"].numpy().squeeze()
         mask_2D = mask_2D.transpose(0, 1)
+        print("mask before combine:", mask_2D.shape, mask_2D.sum().item())
 
         inv_homographies, homographies = (
             sample["homographies"],
@@ -496,6 +497,9 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
             fe.heatmap = outputs  # tensor [batch, 1, H, W]
             print("outputs: ", outputs.shape)
             print("pts: ", pts.shape)
+            if pts.shape[1] == 0:          # nothing detected
+                logging.warning("No points for %s – skipping soft-argmax.", name)
+                continue                   # or save an empty prediction and go on
             pts = fe.soft_argmax_points([pts])
             pts = pts[0]
 

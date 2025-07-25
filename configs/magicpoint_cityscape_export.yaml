@@ -21,9 +21,9 @@ data:
                 rotation: true
                 scaling: true
                 perspective: true
-                scaling_amplitude: 0.2
-                perspective_amplitude_x: 0.2
-                perspective_amplitude_y: 0.2
+                scaling_amplitude: 0.02
+                perspective_amplitude_x: 0.02
+                perspective_amplitude_y: 0.02
                 allow_artifacts: true
                 patch_ratio: 0.85
     warped_pair:
@@ -33,12 +33,12 @@ data:
             rotation: true
             scaling: true
             perspective: true
-            scaling_amplitude: 0.005  # reduced for gentler warp
-            perspective_amplitude_x: 0.001  # reduced for gentler warp
-            perspective_amplitude_y: 0.001 # reduced for gentler warp
+            scaling_amplitude: 0.0005  # reduced for gentler warp
+            perspective_amplitude_x: 0.0001  # reduced for gentler warp
+            perspective_amplitude_y: 0.0001 # reduced for gentler warp
             patch_ratio: 0.95  # wider valid area
             max_angle: 0.1  # ~17 degrees
-            allow_artifacts: true
+            allow_artifacts: false
         valid_border_margin: 0
 
 training:
@@ -53,7 +53,7 @@ model:
     }    
     batch_size: 8
     eval_batch_size: 8
-    detection_threshold: 0.0005 # 0.015
+    detection_threshold: 0.00005 # 0.015
     nms: 1
     top_k: 4096
     subpixel:
