@@ -483,20 +483,39 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
             f"min={heatmap.min().item():.4f}, "
             f"max={heatmap.max().item():.4f}"
         )
+        heatmap_np = heatmap.cpu().numpy().squeeze()        # (H, W)
+        pts_pre = fe.getPtsFromHeatmap(                     # (3, N)
+            heatmap_np
+        )
+
+        # 2.  Draw them on the original (grayscale) image
+        from utils.var_dim import squeezeToNumpy
+        img_np     = squeezeToNumpy(sample["image_2D"])     # (H, W)
+        img_pre_kp = draw_keypoints(img_np * 255, pts_pre.T)
+
+        # 3.  Push to TB
+        writer.add_image(
+            "prewarp/keypoints",                   # new tag
+            torch.from_numpy(img_pre_kp).permute(2, 0, 1) / 255.0,
+            count,
+        )
+        print("pts_pre:", pts_pre.shape[1])
+        print("semi max :", semi.max().item())
+
         if args.export_segmentation and "segmentation" in outs_all:
             seg_pred = outs_all["segmentation"].argmax(dim=1)
             pred_mask = seg_pred.cpu().numpy().squeeze()
         else:
             pred_mask = None
         outputs = combine_heatmap(heatmap, inv_homographies, mask_2D, device=device)
-        print("combined map stats:", outputs.min().item(), outputs.max().item())
+        print("combined map stats(min/max):", outputs.min().item(), outputs.max().item())
         pts = fe.getPtsFromHeatmap(outputs.detach().cpu().squeeze())  # (x,y, prob)
 
         # subpixel prediction
         if config["model"]["subpixel"]["enable"]:
             fe.heatmap = outputs  # tensor [batch, 1, H, W]
             print("outputs: ", outputs.shape)
-            print("pts: ", pts.shape)
+            print("pts_post: ", pts.shape)
             if pts.shape[1] == 0:          # nothing detected
                 logging.warning("No points for %s – skipping soft-argmax.", name)
                 continue                   # or save an empty prediction and go on
