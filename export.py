@@ -66,7 +66,6 @@ def combine_heatmap(heatmap, inv_homographies, mask_2D, device="cpu"):
 
 #### end util functions
 
-
 def export_descriptor(config, output_dir, args):
     """
     # input 2 images, output keypoints and correspondence
@@ -311,6 +310,14 @@ def export_detector_homoAdapt_gpu(config, output_dir, args):
 
     ## loop through all images
     for i, sample in tqdm(enumerate(test_loader)):
+        
+        if sample is None:
+            print(f"[WARN] Skipping None batch at index {i}")
+            continue
+
+        if "image" not in sample or "valid_mask" not in sample:
+            print(f"[WARN] Skipping invalid sample at index {i}")
+            continue
         img, mask_2D = sample["image"], sample["valid_mask"]
         img = img.transpose(0, 1)
         img_2D = sample["image_2D"].numpy().squeeze()

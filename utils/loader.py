@@ -41,6 +41,16 @@ def worker_init_fn(worker_id):
    # print(worker_id, base_seed)
    np.random.seed(base_seed + worker_id)
 
+from torch.utils.data._utils.collate import default_collate
+
+def filter_none_collate(batch):
+    print(f"[collate_fn] Raw batch len: {len(batch)}, types: {[type(b) for b in batch]}")
+    non_empty = [b for b in batch if b is not None]
+    if len(non_empty) == 0:
+        print("[collate_fn] Skipping entire batch: all samples were None")
+        return None
+    return default_collate(non_empty)
+
 
 def dataLoader(config, dataset='syn', warp_input=False, train=True, val=True):
     import torchvision.transforms as transforms
@@ -138,11 +148,13 @@ def dataLoader_test(config, dataset='syn', warp_input=False, export_task='train'
             task=export_task,
             **config['data'],
         )
+        
         test_loader = torch.utils.data.DataLoader(
             test_set, batch_size=1, shuffle=False,
             pin_memory=True,
             num_workers=workers_test,
-            worker_init_fn=worker_init_fn
+            worker_init_fn=worker_init_fn,
+            collate_fn=filter_none_collate
 
         )
     return {'test_set': test_set, 'test_loader': test_loader}

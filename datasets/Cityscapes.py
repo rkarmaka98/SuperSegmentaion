@@ -126,6 +126,7 @@ class Cityscapes(data.Dataset):
 
         # expose utils as attributes for easier access in __getitem__
         self.inv_warp_image_batch = inv_warp_image_batch
+        self.compute_valid_mask = compute_valid_mask
 
     def __len__(self):
         return len(self.samples)
@@ -137,6 +138,7 @@ class Cityscapes(data.Dataset):
         img = cv2.resize(img, (self.sizer[1], self.sizer[0]), interpolation=cv2.INTER_AREA)
         img = img.astype(np.float32) / 255.0
         image_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
+        from utils.utils import compute_valid_mask
 
         output = {
             'image': image_tensor,
@@ -151,6 +153,7 @@ class Cityscapes(data.Dataset):
         pnts = None
         if self.labels:
             pnts = np.load(sample['points'])['pts']
+            print(f"[DEBUG] keypoints shape: {pnts.shape} — nonzero: {pnts.sum()}")
             labels = self.points_to_2D(pnts, H, W)
             output['labels_2D'] = torch.tensor(labels, dtype=torch.float32).unsqueeze(0)
             output['labels_res'] = torch.zeros((2, H, W), dtype=torch.float32)
@@ -210,12 +213,13 @@ class Cityscapes(data.Dataset):
                 inv_homographies,
                 mode='bilinear'
             ).unsqueeze(0).squeeze()
-            print("compute_valid_mask ref:", compute_valid_mask)
+            # print("compute_valid_mask ref:", compute_valid_mask)
             valid_mask = compute_valid_mask(
                 torch.tensor([H, W]),
                 inv_homography=inv_homographies,
                 erosion_radius=self.config['augmentation']['homographic']['valid_border_margin']
             )
+            print(f"[DEBUG] valid_mask sum: {valid_mask.sum()} — shape: {valid_mask.shape}")
             output.update({
                 'image': warped_img,
                 'image_2D': image_tensor,
@@ -256,6 +260,7 @@ class Cityscapes(data.Dataset):
             # print("H_np:\n", H_np)
 
             H_tensor = torch.tensor(H_np, dtype=torch.float32)
+            print(f"[DEBUG] H:\n{H_tensor}")
             warped_img = inv_warp_image(image_tensor.squeeze(0), torch.inverse(H_tensor))
 
             output['warped_image'] = warped_img.unsqueeze(0)
@@ -289,16 +294,29 @@ class Cityscapes(data.Dataset):
             margin = self.config['warped_pair'].get('valid_border_margin', 0)
             valid_mask = compute_valid_mask(torch.tensor([H, W]), torch.inverse(H_tensor), erosion_radius=margin)
             output['warped_valid_mask'] = valid_mask
+            return output
 
             # warp keypoint labels when available
             if self.labels:
                 warped_set = warpLabels(pnts, H, W, H_tensor, bilinear=True)
+                print(f"[DEBUG] warped_labels nonzero: {warped_set['labels'].sum()}")
+                if 'labels_gaussian' in warped_set:
+                    print(f"[DEBUG] warped_gaussian nonzero: {warped_set['labels_gaussian'].sum()}")
+                print(f"[DEBUG] warped_res shape: {warped_set['res'].shape}")
                 output['warped_labels'] = warped_set['labels']
                 output['warped_labels_gaussian'] = warped_set['labels_gaussian']
                 warped_res = warped_set['res'].transpose(1, 2).transpose(0, 1)
                 output['warped_res'] = warped_res
-
+                
                 return output
+        
+        if 'image' not in output or 'valid_mask' not in output or output['image'] is None:
+            print(f"[Cityscapes] Returning None for sample {index}")
+            return None
+        
+        print(f"[DEBUG] index={index}, sample keys: {output.keys() if 'output' in locals() else 'missing output'}")
+
+
 
     @staticmethod
     def points_to_2D(pnts, H, W):
