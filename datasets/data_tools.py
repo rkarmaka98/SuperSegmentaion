@@ -55,11 +55,11 @@ def warpLabels(pnts, H, W, homography, bilinear = False):
 
     warped_pnts = filter_points(warped_pnts, torch.tensor([W, H]))
     warped_labels = scatter_points(warped_pnts, H, W, res_ext = 1)
-    
+    labels_gaussian= torch.zeros_like(warped_labels)
     warped_labels_res = torch.zeros(H, W, 2)
     warped_labels_res[quan(warped_pnts)[:, 1], quan(warped_pnts)[:, 0], :] = warped_pnts - warped_pnts.round()
     # print("res sum: ", (warped_pnts - warped_pnts.round()).sum())
-    outs.update({'labels': warped_labels, 'res': warped_labels_res, 'warped_pnts': warped_pnts})
+    outs.update({'labels': warped_labels, 'res': warped_labels_res, 'warped_pnts': warped_pnts, 'labels_gaussian': labels_gaussian})
     return outs
 
 

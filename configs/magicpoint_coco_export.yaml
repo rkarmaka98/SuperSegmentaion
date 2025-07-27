@@ -1,6 +1,6 @@
 data:
     dataset: 'Coco'  # 'coco' 'hpatches'
-    export_folder: 'val' # train, val
+    export_folder: 'train' # train, val
     preprocessing:
         resize: [240, 320] 
         # resize: [480, 640] 
@@ -29,7 +29,7 @@ data:
 
 training:
     workers_train: 16
-    workers_val:16
+    workers_val: 16
     workers_test: 16
 
 model:
@@ -46,6 +46,6 @@ model:
         enable: true
 
 # pretrained: 'logs/magicpoint_synth20/checkpoints/superPointNet_200000_checkpoint.pth.tar' # 'SuperPointNet'
-pretrained: 'logs/magicpoint_synth_t2/checkpoints/superPointNet_100000_checkpoint.pth.tar' # Newer version with 100k iterations
+pretrained: 'logs/magicpoint_synth/checkpoints/superPointNet_20000_checkpoint.pth.tar' # Newer version with 100k iterations
 
 

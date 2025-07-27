@@ -14,6 +14,7 @@ from utils.var_dim import squeezeToNumpy
 
 from settings import DATA_PATH
 from utils.tools import dict_update
+from datasets.data_tools import warpLabels
 
 
 # mapping from 34 Cityscapes labelIds to 4 broad categories
@@ -146,10 +147,6 @@ class Cityscapes(data.Dataset):
 
         H, W = image_tensor.shape[-2:]
 
-        # always provide a valid mask for the current image
-        valid_mask = compute_valid_mask(torch.tensor([H, W]), torch.eye(3))
-        output['valid_mask'] = valid_mask
-
         # load keypoint labels if available
         pnts = None
         if self.labels:
@@ -213,12 +210,11 @@ class Cityscapes(data.Dataset):
                 inv_homographies,
                 mode='bilinear'
             ).unsqueeze(0).squeeze()
-
+            print("compute_valid_mask ref:", compute_valid_mask)
             valid_mask = compute_valid_mask(
                 torch.tensor([H, W]),
                 inv_homography=inv_homographies,
-                erosion_radius=self.config['augmentation']['homographic'][
-                    'valid_border_margin']
+                erosion_radius=self.config['augmentation']['homographic']['valid_border_margin']
             )
             output.update({
                 'image': warped_img,
@@ -233,45 +229,76 @@ class Cityscapes(data.Dataset):
         # optionally generate a warped pair and provide fields compatible with
         # the training pipeline
         if self.config.get('warped_pair', {}).get('enable', False):
+            import os
+            from utils.cityscapes_camera import load_cityscapes_camera, simulate_ego_motion, compute_homography
+            from utils.utils import inv_warp_image, compute_valid_mask
+
             H, W = image_tensor.shape[-2:]
-            # sample homography mapping warped image to original
-            homo_inv = sample_homography_np(
-                np.array([H, W]), shift=-1,
-                **self.config['warped_pair'].get('params', {})
-            )
-            # invert to obtain transformation from original to warped
-            homography = np.linalg.inv(homo_inv)
-            # warp original image using the inverse matrix
-            warped = inv_warp_image(
-                image_tensor.squeeze(0),
-                torch.tensor(homo_inv, dtype=torch.float32),
-            )
-            # store both naming conventions for compatibility
-            output['warped_image'] = warped.unsqueeze(0)
-            output['warped_img'] = output['warped_image']
-            # homographies in both directions for descriptor loss
-            H_mat = torch.tensor(homography, dtype=torch.float32)
-            H_inv_mat = torch.tensor(homo_inv, dtype=torch.float32)
-            output['homography'] = H_mat
-            output['homographies'] = H_mat.unsqueeze(0)
-            output['inv_homographies'] = H_inv_mat.unsqueeze(0)
+            # load camera parameters from JSON file
+            cam_json = self.root / 'camera' / self.split / sample['scene_name'] / f"{sample['name']}_camera.json"
+            if not cam_json.exists():
+                raise FileNotFoundError(f"Camera JSON not found: {cam_json}")
+
+            # Load calibration
+            K, R_cam, t_cam = load_cityscapes_camera(cam_json)
+
+            # Simulate motion and compute H
+            R_delta, t_delta = simulate_ego_motion()
+            R_warped = R_delta @ R_cam
+            t_warped = t_cam + t_delta
+            H_np = compute_homography(K, R_cam, t_cam, R_warped, t_warped)
+            def scale_homography(H, scale=0.5):
+                H_scaled = H.copy()
+                H_scaled[0, 2] *= scale  # x-translation
+                H_scaled[1, 2] *= scale  # y-translation
+                return H_scaled
+            H_np = scale_homography(H_np, scale=0.5)
+            # print("H_np:\n", H_np)
+
+            H_tensor = torch.tensor(H_np, dtype=torch.float32)
+            warped_img = inv_warp_image(image_tensor.squeeze(0), torch.inverse(H_tensor))
+
+            output['warped_image'] = warped_img.unsqueeze(0)
+            output['warped_img'] = warped_img.unsqueeze(0)
+            output['homography'] = H_tensor
+            output['homographies'] = H_tensor.unsqueeze(0)
+            output['inv_homographies'] = torch.inverse(H_tensor).unsqueeze(0)
+
+            # # sample homography mapping warped image to original
+            # homo_inv = sample_homography_np(
+            #     np.array([H, W]), shift=-1,
+            #     **self.config['warped_pair'].get('params', {})
+            # )
+            # # invert to obtain transformation from original to warped
+            # homography = np.linalg.inv(homo_inv)
+            # # warp original image using the inverse matrix
+            # warped = inv_warp_image(
+            #     image_tensor.squeeze(0),
+            #     torch.tensor(homo_inv, dtype=torch.float32),
+            # )
+            # # store both naming conventions for compatibility
+            # output['warped_image'] = warped.unsqueeze(0)
+            # output['warped_img'] = output['warped_image']
+            # # homographies in both directions for descriptor loss
+            # H_mat = torch.tensor(homography, dtype=torch.float32)
+            # H_inv_mat = torch.tensor(homo_inv, dtype=torch.float32)
+            # output['homography'] = H_mat
+            # output['homographies'] = H_mat.unsqueeze(0)
+            # output['inv_homographies'] = H_inv_mat.unsqueeze(0)
             # valid mask used when computing descriptor loss
             margin = self.config['warped_pair'].get('valid_border_margin', 0)
-            valid_mask = compute_valid_mask(torch.tensor([H, W]), H_inv_mat, erosion_radius=margin)
+            valid_mask = compute_valid_mask(torch.tensor([H, W]), torch.inverse(H_tensor), erosion_radius=margin)
             output['warped_valid_mask'] = valid_mask
 
             # warp keypoint labels when available
             if self.labels:
-                warped_set = warpLabels(pnts, H, W, torch.tensor(homography, dtype=torch.float32), bilinear=True)
+                warped_set = warpLabels(pnts, H, W, H_tensor, bilinear=True)
                 output['warped_labels'] = warped_set['labels']
-                warped_res = warped_set['res'].transpose(1,2).transpose(0,1)
+                output['warped_labels_gaussian'] = warped_set['labels_gaussian']
+                warped_res = warped_set['res'].transpose(1, 2).transpose(0, 1)
                 output['warped_res'] = warped_res
-                if self.gaussian_label:
-                    warped_labels_gaussian = self.gaussian_blur(squeezeToNumpy(warped_set['labels_bi']))
-                    output['warped_labels_gaussian'] = np_to_tensor(warped_labels_gaussian, H, W)
-                    output['warped_labels_bi'] = warped_set['labels_bi']
 
-        return output
+                return output
 
     @staticmethod
     def points_to_2D(pnts, H, W):

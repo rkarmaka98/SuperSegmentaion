@@ -917,6 +917,8 @@ def crop_or_pad_choice(in_num_points, out_num_points, shuffle=False):
     else:
         choice = np.arange(in_num_points)
     assert out_num_points > 0, 'out_num_points = %d must be positive int!'%out_num_points
+    print(f"[DEBUG crop_or_pad_choice] in_num_points: {in_num_points}, out_num_points: {out_num_points}")
+    print(f"[DEBUG crop_or_pad_choice] choice array before padding: {choice}")
     if in_num_points >= out_num_points:
         choice = choice[:out_num_points]
     else:

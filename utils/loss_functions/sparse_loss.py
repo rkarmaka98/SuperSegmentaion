@@ -58,7 +58,7 @@ def create_non_matches(uv_a, uv_b_non_matches, multiplier):
 def descriptor_loss_sparse(descriptors, descriptors_warped, homographies, mask_valid=None,
                            cell_size=8, device='cpu', descriptor_dist=4, lamda_d=250,
                            num_matching_attempts=1000, num_masked_non_matches_per_match=10, 
-                           dist='cos', method='1d', **config):
+                           dist='cos', method='1d', writer=None, global_step=0, **config):
     """
     consider batches of descriptors
     :param descriptors:
@@ -163,12 +163,15 @@ def descriptor_loss_sparse(descriptors, descriptors_warped, homographies, mask_v
 
 
     uv_b_matches = warp_coor_cells_with_homographies(uv_a, homographies_H.to('cpu'), uv=True, device='cpu')
-    # 
+    Hc, Wc = descriptors.shape[1:3]
+    uv_b_matches[:, 0] = torch.clamp(uv_b_matches[:, 0], 0, Wc - 1)
+    uv_b_matches[:, 1] = torch.clamp(uv_b_matches[:, 1], 0, Hc - 1)
     # print("uv_b_matches before round: ", uv_b_matches[0])
 
     uv_b_matches.round_() 
     # print("uv_b_matches after round: ", uv_b_matches[0])
     uv_b_matches = uv_b_matches.squeeze(0)
+    print(f"[descriptor_loss_sparse] num matches: {uv_b_matches.shape[0]}")
 
 
     # filtering out of range points
@@ -177,10 +180,40 @@ def descriptor_loss_sparse(descriptors, descriptors_warped, homographies, mask_v
     uv_b_matches, mask = filter_points(uv_b_matches, torch.tensor([Wc, Hc]).to(device='cpu'), return_mask=True)
     # print ("pos mask sum: ", mask.sum())
     uv_a = uv_a[mask]
+    print(f"[DEBUG] After filter_points — valid matches: {uv_b_matches.shape[0]}")
+    print("[warp test] uv_a[:5] =", uv_a[:5])
+    print("[warp test] uv_b_matches[:5] =", uv_b_matches[:5])
+    grid_img = torch.zeros((1, Hc, Wc))
+    for pt in uv_a:
+        grid_img[0, int(pt[1]), int(pt[0])] = 1.0
+
+    if writer is None:
+        print("Writer is None at global_step", global_step)
+    else:
+        writer.add_image("debug/uv_a_before_warp", grid_img, global_step)
+
+    if writer is not None:
+        def render_keypoint_map(points, shape):
+            heatmap = torch.zeros(shape)
+            for p in points:
+                x, y = int(p[0]), int(p[1])
+                if 0 <= x < shape[1] and 0 <= y < shape[0]:
+                    heatmap[y, x] = 1.0
+            return heatmap
+
+        if uv_b_matches.shape[0] > 0:
+            match_mask = render_keypoint_map(uv_b_matches.cpu(), (Hc, Wc))
+            writer.add_image("debug/uv_b_matches_mask", match_mask.unsqueeze(0), global_step)
+
+        if mask.sum() == 0:
+            empty_debug = torch.zeros((1, Hc, Wc))
+            writer.add_image("debug/mask_debug_empty", empty_debug, global_step)
 
     # crop to the same length
     shuffle = True
     if not shuffle: print("shuffle: ", shuffle)
+    print(f"[DEBUG] uv_b_matches.shape: {uv_b_matches.shape}")
+    print(f"[DEBUG] num_matching_attempts: {num_matching_attempts}")
     choice = crop_or_pad_choice(uv_b_matches.shape[0], num_matching_attempts, shuffle=shuffle)
     choice = torch.tensor(choice).type(torch.int64)
     uv_a = uv_a[choice]
@@ -232,7 +265,7 @@ pltImshow(img.numpy())
 
 """
 
-def batch_descriptor_loss_sparse(descriptors, descriptors_warped, homographies, **options):
+def batch_descriptor_loss_sparse(descriptors, descriptors_warped, homographies, writer=None, global_step=0, **options):
     loss = []
     pos_loss = []
     neg_loss = []

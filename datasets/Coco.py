@@ -135,7 +135,7 @@ class Coco(data.Dataset):
         self.sample_homography = sample_homography
         self.inv_warp_image = inv_warp_image
         self.inv_warp_image_batch = inv_warp_image_batch
-        self.compute_valid_mask = compute_valid_mask
+        self.valid_mask_result = compute_valid_mask
         self.ImgAugTransform = ImgAugTransform
         self.customizedTransform = customizedTransform
         self.warp_points = warp_points

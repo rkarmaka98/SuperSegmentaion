@@ -458,6 +458,8 @@ class Train_model_frontend(object):
             mat_H,
             mask_valid=mask_desc,
             device=self.device,
+            writer=self.writer,
+            global_step=n_iter,
             **self.desc_params
         )
 
