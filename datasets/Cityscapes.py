@@ -260,7 +260,7 @@ class Cityscapes(data.Dataset):
             # print("H_np:\n", H_np)
 
             H_tensor = torch.tensor(H_np, dtype=torch.float32)
-            print(f"[DEBUG] H:\n{H_tensor}")
+            # print(f"[DEBUG] H:\n{H_tensor}")
             warped_img = inv_warp_image(image_tensor.squeeze(0), torch.inverse(H_tensor))
 
             output['warped_image'] = warped_img.unsqueeze(0)
@@ -294,7 +294,7 @@ class Cityscapes(data.Dataset):
             margin = self.config['warped_pair'].get('valid_border_margin', 0)
             valid_mask = compute_valid_mask(torch.tensor([H, W]), torch.inverse(H_tensor), erosion_radius=margin)
             output['warped_valid_mask'] = valid_mask
-            return output
+            
 
             # warp keypoint labels when available
             if self.labels:
@@ -308,14 +308,15 @@ class Cityscapes(data.Dataset):
                 warped_res = warped_set['res'].transpose(1, 2).transpose(0, 1)
                 output['warped_res'] = warped_res
                 
-                return output
+            
         
-        if 'image' not in output or 'valid_mask' not in output or output['image'] is None:
-            print(f"[Cityscapes] Returning None for sample {index}")
-            return None
+        # if 'image' not in output or 'valid_mask' not in output or output['image'] is None:
+        #     print(f"[Cityscapes] Returning None for sample {index}")
+        #     return None
         
-        print(f"[DEBUG] index={index}, sample keys: {output.keys() if 'output' in locals() else 'missing output'}")
+        # print(f"[DEBUG] index={index}, sample keys: {output.keys() if 'output' in locals() else 'missing output'}")
 
+        return output
 
 
     @staticmethod

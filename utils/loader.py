@@ -44,7 +44,7 @@ def worker_init_fn(worker_id):
 from torch.utils.data._utils.collate import default_collate
 
 def filter_none_collate(batch):
-    print(f"[collate_fn] Raw batch len: {len(batch)}, types: {[type(b) for b in batch]}")
+    # print(f"[collate_fn] Raw batch len: {len(batch)}, types: {[type(b) for b in batch]}")
     non_empty = [b for b in batch if b is not None]
     if len(non_empty) == 0:
         print("[collate_fn] Skipping entire batch: all samples were None")
