@@ -214,6 +214,8 @@ def descriptor_loss_sparse(descriptors, descriptors_warped, homographies, mask_v
     if not shuffle: print("shuffle: ", shuffle)
     print(f"[DEBUG] uv_b_matches.shape: {uv_b_matches.shape}")
     print(f"[DEBUG] num_matching_attempts: {num_matching_attempts}")
+    print(f"[DEBUG] uv_b_matches max: {uv_b_matches.max()}, min: {uv_b_matches.min()}")
+
     choice = crop_or_pad_choice(uv_b_matches.shape[0], num_matching_attempts, shuffle=shuffle)
     choice = torch.tensor(choice).type(torch.int64)
     uv_a = uv_a[choice]

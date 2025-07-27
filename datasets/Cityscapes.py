@@ -246,17 +246,33 @@ class Cityscapes(data.Dataset):
             # Load calibration
             K, R_cam, t_cam = load_cityscapes_camera(cam_json)
 
+            original_width, original_height = 2048, 1024
+            scale_x = W / original_width
+            scale_y = H / original_height
+            K[0, :] *= scale_x
+            K[1, :] *= scale_y
+
             # Simulate motion and compute H
             R_delta, t_delta = simulate_ego_motion()
             R_warped = R_delta @ R_cam
             t_warped = t_cam + t_delta
             H_np = compute_homography(K, R_cam, t_cam, R_warped, t_warped)
-            def scale_homography(H, scale=0.5):
-                H_scaled = H.copy()
-                H_scaled[0, 2] *= scale  # x-translation
-                H_scaled[1, 2] *= scale  # y-translation
+
+            def scale_homography(H, H_src, W_src, H_dst, W_dst):
+                """
+                Scale a homography from original image size to resized image size.
+                """
+                S = np.array([
+                    [W_dst / W_src, 0, 0],
+                    [0, H_dst / H_src, 0],
+                    [0, 0, 1]
+                ])
+                H_scaled = S @ H @ np.linalg.inv(S)
                 return H_scaled
-            H_np = scale_homography(H_np, scale=0.5)
+
+            # Use original Cityscapes dimensions
+            H_np = scale_homography(H_np, H_src=1024, W_src=2048, H_dst=H, W_dst=W)
+
             # print("H_np:\n", H_np)
 
             H_tensor = torch.tensor(H_np, dtype=torch.float32)
@@ -294,19 +310,22 @@ class Cityscapes(data.Dataset):
             margin = self.config['warped_pair'].get('valid_border_margin', 0)
             valid_mask = compute_valid_mask(torch.tensor([H, W]), torch.inverse(H_tensor), erosion_radius=margin)
             output['warped_valid_mask'] = valid_mask
-            
 
             # warp keypoint labels when available
             if self.labels:
                 warped_set = warpLabels(pnts, H, W, H_tensor, bilinear=True)
                 print(f"[DEBUG] warped_labels nonzero: {warped_set['labels'].sum()}")
-                if 'labels_gaussian' in warped_set:
-                    print(f"[DEBUG] warped_gaussian nonzero: {warped_set['labels_gaussian'].sum()}")
+
                 print(f"[DEBUG] warped_res shape: {warped_set['res'].shape}")
                 output['warped_labels'] = warped_set['labels']
-                output['warped_labels_gaussian'] = warped_set['labels_gaussian']
                 warped_res = warped_set['res'].transpose(1, 2).transpose(0, 1)
                 output['warped_res'] = warped_res
+                if self.gaussian_label:
+                    warped_gaussian = self.gaussian_blur(squeezeToNumpy(warped_set['labels']))
+                    warped_set['labels_gaussian'] = warped_gaussian
+                output['warped_labels_gaussian'] = warped_set['labels_gaussian']
+                if 'labels_gaussian' in warped_set:
+                    print(f"[DEBUG] warped_gaussian nonzero: {warped_set['labels_gaussian'].sum()}")
                 
             
         
