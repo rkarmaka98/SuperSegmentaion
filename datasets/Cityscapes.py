@@ -153,7 +153,7 @@ class Cityscapes(data.Dataset):
         pnts = None
         if self.labels:
             pnts = np.load(sample['points'])['pts']
-            print(f"[DEBUG] keypoints shape: {pnts.shape} — nonzero: {pnts.sum()}")
+            # print(f"[DEBUG] keypoints shape: {pnts.shape} — nonzero: {pnts.sum()}")
             labels = self.points_to_2D(pnts, H, W)
             output['labels_2D'] = torch.tensor(labels, dtype=torch.float32).unsqueeze(0)
             output['labels_res'] = torch.zeros((2, H, W), dtype=torch.float32)
@@ -219,7 +219,7 @@ class Cityscapes(data.Dataset):
                 inv_homography=inv_homographies,
                 erosion_radius=self.config['augmentation']['homographic']['valid_border_margin']
             )
-            print(f"[DEBUG] valid_mask sum: {valid_mask.sum()} — shape: {valid_mask.shape}")
+            # print(f"[DEBUG] valid_mask sum: {valid_mask.sum()} — shape: {valid_mask.shape}")
             output.update({
                 'image': warped_img,
                 'image_2D': image_tensor,
@@ -314,18 +314,19 @@ class Cityscapes(data.Dataset):
             # warp keypoint labels when available
             if self.labels:
                 warped_set = warpLabels(pnts, H, W, H_tensor, bilinear=True)
-                print(f"[DEBUG] warped_labels nonzero: {warped_set['labels'].sum()}")
+                # print(f"[DEBUG] warped_labels nonzero: {warped_set['labels'].sum()}")
 
-                print(f"[DEBUG] warped_res shape: {warped_set['res'].shape}")
+                # print(f"[DEBUG] warped_res shape: {warped_set['res'].shape}")
                 output['warped_labels'] = warped_set['labels']
                 warped_res = warped_set['res'].transpose(1, 2).transpose(0, 1)
                 output['warped_res'] = warped_res
                 if self.gaussian_label:
                     warped_gaussian = self.gaussian_blur(squeezeToNumpy(warped_set['labels']))
+                    warped_gaussian = np_to_tensor(warped_gaussian, H, W)
                     warped_set['labels_gaussian'] = warped_gaussian
                 output['warped_labels_gaussian'] = warped_set['labels_gaussian']
-                if 'labels_gaussian' in warped_set:
-                    print(f"[DEBUG] warped_gaussian nonzero: {warped_set['labels_gaussian'].sum()}")
+                # if 'labels_gaussian' in warped_set:
+                    # print(f"[DEBUG] warped_gaussian nonzero: {warped_set['labels_gaussian'].sum()}")
                 
             
         

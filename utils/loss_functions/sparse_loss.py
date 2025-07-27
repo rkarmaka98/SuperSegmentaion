@@ -166,31 +166,34 @@ def descriptor_loss_sparse(descriptors, descriptors_warped, homographies, mask_v
     Hc, Wc = descriptors.shape[1:3]
     uv_b_matches[:, 0] = torch.clamp(uv_b_matches[:, 0], 0, Wc - 1)
     uv_b_matches[:, 1] = torch.clamp(uv_b_matches[:, 1], 0, Hc - 1)
-    # print("uv_b_matches before round: ", uv_b_matches[0])
+    # print("[DEBUG] uv_b_matches before round: ", uv_b_matches[0])
 
     uv_b_matches.round_() 
-    # print("uv_b_matches after round: ", uv_b_matches[0])
+    # print("[DEBUG] uv_b_matches after round: ", uv_b_matches[0])
     uv_b_matches = uv_b_matches.squeeze(0)
-    print(f"[descriptor_loss_sparse] num matches: {uv_b_matches.shape[0]}")
+    # print(f"[DEBUG] [descriptor_loss_sparse] num matches: {uv_b_matches.shape[0]}")
 
 
     # filtering out of range points
     # choice = crop_or_pad_choice(x_all.shape[0], self.sift_num, shuffle=True)
 
     uv_b_matches, mask = filter_points(uv_b_matches, torch.tensor([Wc, Hc]).to(device='cpu'), return_mask=True)
-    # print ("pos mask sum: ", mask.sum())
+    # print ("[DEBUG] pos mask sum: ", mask.sum())
     uv_a = uv_a[mask]
-    print(f"[DEBUG] After filter_points — valid matches: {uv_b_matches.shape[0]}")
-    print("[warp test] uv_a[:5] =", uv_a[:5])
-    print("[warp test] uv_b_matches[:5] =", uv_b_matches[:5])
+    # print(f"[DEBUG] After filter_points — valid matches: {uv_b_matches.shape[0]}")
+    # print("[DEBUG] [warp test] uv_a[:5] =", uv_a[:5])
+    # print("[DEBUG] [warp test] uv_b_matches[:5] =", uv_b_matches[:5])
     grid_img = torch.zeros((1, Hc, Wc))
     for pt in uv_a:
         grid_img[0, int(pt[1]), int(pt[0])] = 1.0
+    
+    # from torch.utils.tensorboard import SummaryWriter
+    # writer = SummaryWriter()
 
-    if writer is None:
-        print("Writer is None at global_step", global_step)
-    else:
-        writer.add_image("debug/uv_a_before_warp", grid_img, global_step)
+    # if writer is None:
+    #     print("Writer is None at global_step", global_step)
+    # else:
+    #     writer.add_image("debug/uv_a_before_warp", grid_img, global_step)
 
     if writer is not None:
         def render_keypoint_map(points, shape):
@@ -212,9 +215,9 @@ def descriptor_loss_sparse(descriptors, descriptors_warped, homographies, mask_v
     # crop to the same length
     shuffle = True
     if not shuffle: print("shuffle: ", shuffle)
-    print(f"[DEBUG] uv_b_matches.shape: {uv_b_matches.shape}")
-    print(f"[DEBUG] num_matching_attempts: {num_matching_attempts}")
-    print(f"[DEBUG] uv_b_matches max: {uv_b_matches.max()}, min: {uv_b_matches.min()}")
+    # print(f"[DEBUG] uv_b_matches.shape: {uv_b_matches.shape}")
+    # print(f"[DEBUG] num_matching_attempts: {num_matching_attempts}")
+    # print(f"[DEBUG] uv_b_matches max: {uv_b_matches.max()}, min: {uv_b_matches.min()}")
 
     choice = crop_or_pad_choice(uv_b_matches.shape[0], num_matching_attempts, shuffle=shuffle)
     choice = torch.tensor(choice).type(torch.int64)
