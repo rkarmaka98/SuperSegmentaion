@@ -22,7 +22,7 @@ data:
     # Set to 34 when using CS-34 masks under panoptic_cs34_* folders
     num_segmentation_classes: 34
     preprocessing:
-        resize: [240, 320]
+        resize: [480, 620]
         # resize: [480, 640]
     augmentation:
         photometric:
@@ -76,7 +76,7 @@ model:
     eval_batch_size: 8 # 32
     learning_rate: 0.0001 # 0.0001
     detection_threshold: 0.015 # 0.015
-    lambda_loss: 1 # 1
+    lambda_loss: 0.1 # 1
     lambda_segmentation: 1.0
     num_segmentation_classes: 34    
     nms: 4
@@ -103,12 +103,12 @@ model:
 
 retrain: True # set true for new model
 reset_iter: True # set true to set the iteration number to 0
-train_iter: 1000 # 170000
-validation_interval: 100 # 2000
-tensorboard_interval: 20 # 200
+train_iter: 5000 # 170000
+validation_interval: 50 # 2000
+tensorboard_interval: 100 # 200
 save_interval: 200 # 2000
 validation_size: 5
-truncate: 1000
+truncate: 5000
 
 pretrained: 
 

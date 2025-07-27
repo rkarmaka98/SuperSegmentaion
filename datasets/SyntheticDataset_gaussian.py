@@ -195,7 +195,7 @@ class SyntheticDataset_gaussian(data.Dataset):
 
         self.transform = transform
         self.sample_homography = sample_homography
-        self.valid_mask_result = compute_valid_mask
+        self.compute_valid_mask = compute_valid_mask
         self.inv_warp_image = inv_warp_image
         self.warp_points = warp_points
         self.ImgAugTransform = ImgAugTransform

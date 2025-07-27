@@ -50,8 +50,9 @@ class ASPP(nn.Module):
 
 class SuperPointNet_gauss2(torch.nn.Module):
     """ Pytorch definition of SuperPoint Network. """
-    def __init__(self, subpixel_channel=1, num_classes=1):
+    def __init__(self, subpixel_channel=1, num_classes=1, seg_refine=True):
         super(SuperPointNet_gauss2, self).__init__()
+        self.seg_refine = seg_refine
         c1, c2, c3, c4, c5, d1 = 64, 64, 128, 128, 256, 256
         det_h = 65
         self.inc = inconv(1, c1)
@@ -77,12 +78,22 @@ class SuperPointNet_gauss2(torch.nn.Module):
         self.bnDb = nn.BatchNorm2d(d1)
         # Segmentation Head with ASPP for richer context
         self.seg_aspp = ASPP(c4, 128)
-        self.seg_head = nn.Sequential(
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, num_classes, kernel_size=1)
-        )
+        if seg_refine:
+            self.seg_up = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+            self.seg_fuse = nn.Sequential(
+                nn.Conv2d(64 + c3, 64, 3, padding=1, bias=False),
+                nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+                nn.Conv2d(64, 64, 3, padding=1, bias=False),
+                nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            )
+            self.seg_head = nn.Conv2d(64, num_classes, 1)
+        else:
+            self.seg_head = nn.Sequential(
+                nn.Conv2d(128, 128, kernel_size=3, padding=1),
+                nn.BatchNorm2d(128),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(128, num_classes, kernel_size=1)
+            )
 
         self.output = None
 
@@ -111,6 +122,14 @@ class SuperPointNet_gauss2(torch.nn.Module):
         desc = self.bnDb(self.convDb(cDa))
         # Segmentation Head producing per-pixel class logits
         seg = self.seg_aspp(x4)
+        if self.seg_refine:                               
+            seg = self.seg_up(seg)                         # /8 -> /4
+            # handle odd image sizes
+            if seg.shape[-2:] != x3.shape[-2:]:
+                seg = F.interpolate(seg, size=x3.shape[-2:], mode='bilinear',
+                                    align_corners=False)
+            seg = torch.cat([seg, x3], dim=1)              # skip connection
+            seg = self.seg_fuse(seg)                       # 64-ch refined map
         seg_logits = self.seg_head(seg)
 
         dn = torch.norm(desc, p=2, dim=1) # Compute the norm.

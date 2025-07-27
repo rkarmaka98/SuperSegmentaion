@@ -28,6 +28,8 @@ from utils.utils import precisionRecall_torch
 from pathlib import Path
 from Train_model_frontend import Train_model_frontend
 
+from segmentation_models_pytorch.losses import DiceLoss
+
 
 def thd_img(img, thd=0.015):
     img[img < thd] = 0
@@ -91,7 +93,7 @@ class Train_model_heatmap(Train_model_frontend):
         self.num_segmentation_classes = self.config["model"].get("num_segmentation_classes", 0)
         # optional computation of segmentation mIoU per batch
         self.compute_miou = self.config["model"].get("compute_miou", False)
-
+        self.seg_loss_fn = DiceLoss(mode='multiclass', from_logits=True)
         self.max_iter = config["train_iter"]
 
         self.gaussian = False
@@ -373,7 +375,7 @@ class Train_model_heatmap(Train_model_frontend):
             assert seg_target.max() < n_classes and seg_target.min() >= 0, (
                 f"Segmentation labels must be in [0, {n_classes-1}]"
             )
-            seg_loss = F.cross_entropy(seg_pred, seg_target)
+            seg_loss = self.seg_loss_fn(seg_pred, seg_target)
             loss += self.lambda_segmentation * seg_loss
 
             # compute batch mean IoU when enabled

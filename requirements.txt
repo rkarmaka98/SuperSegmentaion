@@ -5,6 +5,7 @@ scipy
 opencv-python
 opencv-contrib-python
 matplotlib
+segmentation-models-pytorch
 imageio
 tqdm
 tensorflow[and-cuda]
@@ -22,6 +23,5 @@ torchinfo
 kornia
 coloredlogs
 tensorflow-addons
-# panopticapi
-git+https://github.com/cocodataset/panopticapi.git
+panopticapi @ git+https://github.com/cocodataset/panopticapi.git
 
