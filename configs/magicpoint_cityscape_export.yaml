@@ -1,8 +1,8 @@
 data:
     dataset: 'Cityscapes'  # 'coco' 'hpatches'
-    export_folder: 'val' # train, val
+    export_folder: 'train' # train, val
     preprocessing:
-        resize: [240, 320] 
+        resize: [256, 512] 
         # resize: [480, 640] 
     gaussian_label:
         enable: false # false

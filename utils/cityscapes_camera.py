@@ -29,7 +29,7 @@ def load_cityscapes_camera(json_path):
 
     return K, R_cam, t
 
-def simulate_ego_motion(delta_yaw_deg=0.2, forward_cm=2.0, scale=0.3):
+def simulate_ego_motion(delta_yaw_deg=0.0, forward_cm=0.2, scale=0.3):
     delta_yaw_deg *= scale
     forward_cm *= scale
     R_delta = R.from_euler('y', np.deg2rad(delta_yaw_deg)).as_matrix()

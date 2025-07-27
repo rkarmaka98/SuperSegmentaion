@@ -12,6 +12,7 @@ import cv2
 from utils.utils import homography_scaling_torch as homography_scaling
 from utils.utils import filter_points
 from pycocotools.coco import COCO
+from utils.utils import compute_valid_mask
 
 class Coco(data.Dataset):
     """COCO dataset loader.
@@ -135,7 +136,7 @@ class Coco(data.Dataset):
         self.sample_homography = sample_homography
         self.inv_warp_image = inv_warp_image
         self.inv_warp_image_batch = inv_warp_image_batch
-        self.valid_mask_result = compute_valid_mask
+        self.compute_valid_mask = compute_valid_mask
         self.ImgAugTransform = ImgAugTransform
         self.customizedTransform = customizedTransform
         self.warp_points = warp_points
@@ -289,7 +290,8 @@ class Coco(data.Dataset):
         # img_aug = _preprocess(img_aug[:,:,np.newaxis])
         img_aug = torch.tensor(img_aug, dtype=torch.float32).view(-1, H, W)
 
-        valid_mask = self.compute_valid_mask(torch.tensor([H, W]), inv_homography=torch.eye(3))
+        from utils.utils import compute_valid_mask
+        valid_mask = compute_valid_mask(torch.tensor([H, W]), inv_homography=torch.eye(3))
         input.update({'image': img_aug})
         input.update({'valid_mask': valid_mask})
 
@@ -443,7 +445,7 @@ class Coco(data.Dataset):
                     input.update({'warped_labels_bi': warped_labels_bi})
 
                 input.update({'warped_img': warped_img, 'warped_labels': warped_labels, 'warped_res': warped_res})
-
+                from utils.utils import compute_valid_mask
                 # print('erosion_radius', self.config['warped_pair']['valid_border_margin'])
                 valid_mask = self.compute_valid_mask(torch.tensor([H, W]), inv_homography=inv_homography,
                             erosion_radius=self.config['warped_pair']['valid_border_margin'])  # can set to other value

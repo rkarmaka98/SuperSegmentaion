@@ -257,22 +257,7 @@ class Cityscapes(data.Dataset):
             R_warped = R_delta @ R_cam
             t_warped = t_cam + t_delta
             H_np = compute_homography(K, R_cam, t_cam, R_warped, t_warped)
-
-            def scale_homography(H, H_src, W_src, H_dst, W_dst):
-                """
-                Scale a homography from original image size to resized image size.
-                """
-                S = np.array([
-                    [W_dst / W_src, 0, 0],
-                    [0, H_dst / H_src, 0],
-                    [0, 0, 1]
-                ])
-                H_scaled = S @ H @ np.linalg.inv(S)
-                return H_scaled
-
-            # Use original Cityscapes dimensions
-            H_np = scale_homography(H_np, H_src=1024, W_src=2048, H_dst=H, W_dst=W)
-
+            # print(f"[DEBUG] Homography matrix:\n{H_np}")
             # print("H_np:\n", H_np)
 
             H_tensor = torch.tensor(H_np, dtype=torch.float32)
