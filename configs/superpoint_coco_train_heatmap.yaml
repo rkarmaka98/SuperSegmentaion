@@ -22,7 +22,7 @@ data:
     # Set to 34 when using CS-34 masks under panoptic_cs34_* folders
     num_segmentation_classes: 34
     preprocessing:
-        resize: [480, 640]
+        resize: [240, 320]  # [480, 640]  # images are downsampled for training
         # resize: [480, 640]
     augmentation:
         photometric:

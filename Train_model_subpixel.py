@@ -188,18 +188,18 @@ class Train_model_subpixel(Train_model_frontend):
 
         return loss.item()
 
-    def tb_images_dict(self, task, tb_imgs, max_img=5):
-        for element in list(tb_imgs):
-            for idx in range(tb_imgs[element].shape[0]):
-                if idx >= max_img: break
-                self.writer.add_image(task + '-' + element + '/%d'%idx, 
-                    tb_imgs[element][idx,...], self.n_iter)
+    # def tb_images_dict(self, task, tb_imgs, max_img=5):
+    #     for element in list(tb_imgs):
+    #         for idx in range(tb_imgs[element].shape[0]):
+    #             if idx >= max_img: break
+    #             self.writer.add_image(task + '-' + element + '/%d'%idx, 
+    #                 tb_imgs[element][idx,...], self.n_iter)
 
-    def tb_hist_dict(self, task, tb_dict):
-        for element in list(tb_dict):
-            self.writer.add_histogram(task + '-' + element, 
-              tb_dict[element], self.n_iter)  
-        pass
+    # def tb_hist_dict(self, task, tb_dict):
+    #     for element in list(tb_dict):
+    #         self.writer.add_histogram(task + '-' + element, 
+    #           tb_dict[element], self.n_iter)  
+    #     pass
 
 
 
@@ -223,10 +223,6 @@ if __name__ == '__main__':
 
     train_agent = Train_model_subpixel(config, device=device)
     train_agent.print()
-    # writer from tensorboard
-    from torch.utils.tensorboard import SummaryWriter
-    writer = SummaryWriter()
-    train_agent.writer = writer
 
     # feed the data into the agent
     train_agent.train_loader = train_loader
