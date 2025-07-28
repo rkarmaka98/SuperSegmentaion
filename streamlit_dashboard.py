@@ -176,6 +176,8 @@ if experiment_name:
                             ax.set_xlabel("Iteration")
                             ax.set_ylabel(tag)
                             st.pyplot(fig)
+                            # Close figure after rendering to avoid memory leaks
+                            plt.close(fig)
         else:
             st.warning("No valid data found in TensorBoard logs.")
 
