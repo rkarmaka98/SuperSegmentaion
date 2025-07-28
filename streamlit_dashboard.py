@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.express as px  # Plotly provides interactive zoom and hover
 import os
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 from glob import glob
@@ -312,16 +312,22 @@ if experiment_name:
             for group_name, tags in grouped.items():
                 if tags:
                     st.markdown(f"### {group_name} Metrics")
+                    # Build a DataFrame with all selected metrics for Plotly
+                    df = pd.DataFrame({"Iteration": steps})
                     for tag in tags:
                         if tag in scalars:
-                            st.subheader(f"{tag}")
-                            fig, ax = plt.subplots()
-                            ax.plot(steps[:len(scalars[tag])], scalars[tag])
-                            ax.set_xlabel("Iteration")
-                            ax.set_ylabel(tag)
-                            st.pyplot(fig)
-                            # Close figure after rendering to avoid memory leaks
-                            plt.close(fig)
+                            values = scalars[tag]
+                            if len(values) < len(steps):
+                                # Pad missing values so all series align
+                                values += [None] * (len(steps) - len(values))
+                            df[tag] = values
+                    fig = px.line(
+                        df,
+                        x="Iteration",
+                        y=tags,
+                        labels={"value": "Value", "variable": "Metric"},
+                    )
+                    st.plotly_chart(fig)
         else:
             st.warning("No valid data found in TensorBoard logs.")
 
