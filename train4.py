@@ -95,6 +95,8 @@ def train_joint(config, output_dir, args):
         print ("press ctrl + c, save model!")
         train_agent.saveModel()
         pass
+    # close tensorboard writer to prevent duplicate plugin registration
+    writer.close()
 
 if __name__ == '__main__':
     # global var

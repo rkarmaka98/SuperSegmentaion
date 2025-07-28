@@ -179,6 +179,8 @@ def export_descriptor(config, output_dir, args):
     save_file = save_output / "export.txt"
     with open(save_file, "a") as myfile:
         myfile.write("output pairs: " + str(count) + '\n')
+    # close tensorboard writer to prevent duplicate plugin registration
+    writer.close()
     pass
 
 

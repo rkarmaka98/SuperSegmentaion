@@ -218,6 +218,8 @@ def export_descriptor(config, output_dir, args):
         # print("save: ", path)
         count += 1
     print("output pairs: ", count)
+    # close tensorboard writer to avoid duplicate plugin errors
+    writer.close()
 
 
 @torch.no_grad()
