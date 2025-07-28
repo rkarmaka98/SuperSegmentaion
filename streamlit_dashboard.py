@@ -84,7 +84,21 @@ def overlay_keypoints(image, keypoints, color=(0, 255, 0)):
             cv2.circle(img, (int(pt[0]), int(pt[1])), 3, color, -1)
     return img
 
-def load_npz_images(base_path, selected_folder):
+def overlay_matches(image, kpts1, kpts2, matches, color=(255, 0, 0)):
+    """Draw match lines between two sets of keypoints on the image."""
+    img = image.copy()
+    for m in matches:
+        if len(m) >= 4:
+            # matches array already contains coordinates [x1, y1, x2, y2]
+            pt1, pt2 = m[:2], m[2:4]
+        elif kpts1 is not None and kpts2 is not None and len(m) >= 2:
+            pt1, pt2 = kpts1[int(m[0])], kpts2[int(m[1])]
+        else:
+            continue
+        cv2.line(img, (int(pt1[0]), int(pt1[1])), (int(pt2[0]), int(pt2[1])), color, 1)
+    return img
+
+def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, show_matches=False, show_conf=False):
     folder_path = os.path.join(base_path, selected_folder)
     npz_files = glob(os.path.join(folder_path, '**', '*.npz'), recursive=True)
     overlays = []
@@ -96,29 +110,43 @@ def load_npz_images(base_path, selected_folder):
             gt_mask = data.get('gt_mask') or data.get('mask_gt') or data.get('segmentation_gt')
             conf = data.get('confidence')
             kpts = data.get('keypoints')
-            if base_img is None or pred_mask is None:
+            matches = data.get('matches')
+            kpts1 = data.get('keypoints1')
+            kpts2 = data.get('keypoints2')
+            if base_img is None:
                 continue
             base_img = base_img.astype(np.uint8)
             if base_img.ndim == 2:
                 base_img = np.stack([base_img]*3, axis=-1)
-            if pred_mask.ndim != 2:
-                continue
-            num_classes = int(max(pred_mask.max(), gt_mask.max() if gt_mask is not None else 0)) + 1
-            pred_color, legend_map = colorize_mask(pred_mask, num_classes)
-            pred_overlay = cv2.addWeighted(base_img, 0.5, pred_color, 0.5, 0)
-            if conf is not None:
+
+            overlay_img = base_img.copy()
+            legend_map = None
+
+            if show_seg and pred_mask is not None and pred_mask.ndim == 2:
+                num_classes = int(max(pred_mask.max(), gt_mask.max() if gt_mask is not None else 0)) + 1
+                pred_color, legend_map = colorize_mask(pred_mask, num_classes)
+                overlay_img = cv2.addWeighted(overlay_img, 0.5, pred_color, 0.5, 0)
+
+            if show_kpts and kpts is not None:
+                overlay_img = overlay_keypoints(overlay_img, kpts)
+
+            if show_matches and matches is not None:
+                overlay_img = overlay_matches(overlay_img, kpts1, kpts2, matches)
+
+            conf_img = None
+            if show_conf and conf is not None:
                 heatmap = (conf * 255).astype(np.uint8)
                 heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-                pred_overlay = cv2.addWeighted(pred_overlay, 0.6, heatmap, 0.4, 0)
-            if kpts is not None:
-                pred_overlay = overlay_keypoints(pred_overlay, kpts)
-            if gt_mask is not None:
+                conf_img = cv2.addWeighted(overlay_img.copy(), 0.6, heatmap, 0.4, 0)
+
+            if gt_mask is not None and pred_mask is not None and pred_mask.ndim == 2:
                 gt_color, _ = colorize_mask(gt_mask, num_classes)
                 gt_overlay = cv2.addWeighted(base_img, 0.5, gt_color, 0.5, 0)
-                comparison = np.concatenate([gt_overlay, pred_overlay], axis=1)
-                overlays.append((f, comparison, legend_map))
-            else:
-                overlays.append((f, pred_overlay, legend_map))
+                overlay_img = np.concatenate([gt_overlay, overlay_img], axis=1)
+                if conf_img is not None:
+                    conf_img = np.concatenate([gt_overlay, conf_img], axis=1)
+
+            overlays.append((f, base_img, overlay_img, conf_img, legend_map))
         except Exception as e:
             continue
     return overlays
@@ -186,17 +214,18 @@ if experiment_name:
         st.markdown(f"### Overlay Visuals from logs/{selected_npz_folder}")
         overlays = load_npz_images(NPZ_SEARCH_PATH, selected_npz_folder)
         if overlays:
-            for f, img, legend_map in overlays[:10]:
-                # Streamlit expects a boolean for use_column_width
-                st.image(img, caption=os.path.relpath(f, NPZ_SEARCH_PATH), channels="RGB", use_column_width=True)
+            for f, base_img, overlay_img, conf_img, legend_map in overlays[:10]:
+                # display confidence overlay when available
+                display_img = conf_img if conf_img is not None else overlay_img
+                st.image(display_img, caption=os.path.relpath(f, NPZ_SEARCH_PATH), channels="RGB", use_column_width=True)
                 if legend_map is not None:
                     st.markdown("**Class Color Legend:**")
                     for idx, color in enumerate(legend_map):
                         color_hex = '#%02x%02x%02x' % tuple(color)
                         st.markdown(f"<span style='display:inline-block;width:15px;height:15px;background-color:{color_hex};margin-right:10px'></span> Class {idx}", unsafe_allow_html=True)
-                # save overlay to PNG in memory for download
+                # save displayed overlay to PNG in memory for download
                 buffer = BytesIO()
-                Image.fromarray(img).save(buffer, format="PNG")
+                Image.fromarray(display_img).save(buffer, format="PNG")
                 buffer.seek(0)
                 st.download_button(
                     "Download Image",
