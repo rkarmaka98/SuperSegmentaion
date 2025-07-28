@@ -177,6 +177,14 @@ with st.sidebar:
     if show_npz_overlay:
         folder_candidates = sorted([f for f in os.listdir(NPZ_SEARCH_PATH) if os.path.isdir(os.path.join(NPZ_SEARCH_PATH, f))])
         selected_npz_folder = st.selectbox("Select subfolder from logs/", folder_candidates)
+    # Toggle displaying predicted segmentation masks
+    show_seg = st.checkbox("Show segmentation", value=True)
+    # Toggle overlaying detected keypoints
+    show_kpts = st.checkbox("Show keypoints", value=True)
+    # Toggle drawing match lines between keypoints
+    show_matches = st.checkbox("Show matching lines", value=False)
+    # Toggle rendering confidence heatmap overlay
+    show_conf = st.checkbox("Show confidence heatmap", value=False)
 
 if experiment_name:
     log_path = os.path.join(BASE_LOG_DIR, experiment_name)
@@ -213,7 +221,14 @@ if experiment_name:
 
     if show_npz_overlay and selected_npz_folder:
         st.markdown(f"### Overlay Visuals from logs/{selected_npz_folder}")
-        overlays = load_npz_images(NPZ_SEARCH_PATH, selected_npz_folder)
+        overlays = load_npz_images(
+            NPZ_SEARCH_PATH,
+            selected_npz_folder,
+            show_seg=show_seg,
+            show_kpts=show_kpts,
+            show_matches=show_matches,
+            show_conf=show_conf,
+        )
         if overlays:
             for f, base_img, overlay_img, conf_img, legend_map in overlays[:10]:
                 # display confidence overlay when available
