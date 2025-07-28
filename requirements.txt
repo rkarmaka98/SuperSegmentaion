@@ -10,6 +10,7 @@ imageio
 tqdm
 tensorflow[and-cuda]
 tensorboard
+streamlit
 # torch.utils.tensorboard
 tqdm
 pyyaml

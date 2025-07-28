@@ -15,7 +15,7 @@ data:
         params:
             GaussianBlur: {sigma: 0.2}
     preprocessing:
-        resize: [256, 512] #[512, 1024]  # images are downsampled for training
+        resize: [512, 1024] #[512, 1024]  # images are downsampled for training
     augmentation:
         photometric:
             enable: true
@@ -32,7 +32,7 @@ data:
                     kernel_size_range: [100, 150]
                 motion_blur: {max_kernel_size: 3}
         homographic:
-            enable: true     # samples per image for aggregation
+            enable: false     # samples per image for aggregation
             max_angle: 0.15             # in radians (~10°)
             translate: 0.02              # relative to image size
             scale: [0.95, 1.05]
@@ -44,7 +44,7 @@ data:
             translation: true
             rotation: true
             scaling: true
-            perspective: true
+            perspective: false
             scaling_amplitude: 0.05
             perspective_amplitude_x: 0.01
             perspective_amplitude_y: 0.01
@@ -70,7 +70,7 @@ model:
     eval_batch_size: 8
     learning_rate: 0.0001  # reasonable learning rate
     detection_threshold: 0.015
-    lambda_loss: 0.1
+    lambda_loss: 0.3
     lambda_segmentation: 1.0
     num_segmentation_classes: 4
     compute_miou: true  # log mIoU for each batch
@@ -99,6 +99,6 @@ save_interval: 25 #2000
 validation_size: 5
 truncate: 1000
 
-pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_1000_checkpoint.pth.tar'
+pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_2300_checkpoint.pth.tar'
     # pretrained: 'logs/superpoint_coco_heat2_0/checkpoints/superPointNet_90000_checkpoint.pth.tar'
 

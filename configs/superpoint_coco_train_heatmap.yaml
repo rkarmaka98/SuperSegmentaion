@@ -59,7 +59,7 @@ data:
 front_end_model: 'Train_model_heatmap'  # 'Train_model_frontend'
 
 training:
-    workers_train: 14 # 16
+    workers_train: 8 # 16
     workers_val: 2 # 2
 
 model:
@@ -76,10 +76,10 @@ model:
     eval_batch_size: 8 # 32
     learning_rate: 0.0001 # 0.0001
     detection_threshold: 0.015 # 0.015
-    lambda_loss: 0.1 # 1
-    lambda_segmentation: 1.0
+    lambda_loss: 1 # 1
+    lambda_segmentation: 0.5
     num_segmentation_classes: 34    
-    nms: 4
+    nms: 5
     dense_loss:
         enable: false
         params:
@@ -108,7 +108,7 @@ validation_interval: 50 # 2000
 tensorboard_interval: 100 # 200
 save_interval: 100 # 2000
 validation_size: 5
-truncate: 1000
+truncate: 2000
 
 pretrained: 
 
