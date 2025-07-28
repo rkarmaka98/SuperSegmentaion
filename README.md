@@ -111,6 +111,9 @@ datasets/ ($DATA_DIR)
 
 Example commands using the Cityscapes configs:
 
+Mixed precision can be enabled by setting `amp: true` in the YAML file. This
+activates PyTorch's autocast and `GradScaler` during training.
+
 ```bash
 # training
 python train4.py train_joint configs/superpoint_cityscapes_finetune.yaml superpoint_cityscapes --eval

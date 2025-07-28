@@ -21,6 +21,8 @@ from utils.utils import labels2Dto3D, flattenDetection, labels2Dto3D_flattened
 from utils.utils import pltImshow, saveImg
 from utils.utils import precisionRecall_torch
 from utils.utils import save_checkpoint
+from torch.cuda.amp import autocast, GradScaler  # AMP utilities
+from contextlib import nullcontext
 
 from pathlib import Path
 from Train_model_frontend import Train_model_frontend
@@ -35,7 +37,11 @@ class Train_model_subpixel(Train_model_frontend):
             'subpixel': {
                 'enable': False
             }
-        }
+        },
+        # Mixed precision training options
+        'amp': False,
+        'amp_dtype': 'fp16',
+        'grad_scaler': {'enabled': True, 'init_scale': 65536, 'growth_interval': 2000}
     }
     def __init__(self, config, save_path=Path('.'), device='cpu', verbose=False):
         print("using: Train_model_subpixel")
@@ -47,6 +53,19 @@ class Train_model_subpixel(Train_model_frontend):
         self.max_iter = config['train_iter']
         self._train = True
         self._eval = True
+
+        # automatic mixed precision settings
+        self.use_amp = self.config.get('amp', False)
+        dtype = self.config.get('amp_dtype', 'fp16')
+        self.amp_dtype = torch.float16 if dtype == 'fp16' else torch.bfloat16
+        gs_conf = self.config.get('grad_scaler', {})
+        if self.use_amp and gs_conf.get('enabled', True):
+            self.grad_scaler = GradScaler(
+                init_scale=gs_conf.get('init_scale', 65536),
+                growth_interval=gs_conf.get('growth_interval', 2000),
+            )
+        else:
+            self.grad_scaler = None
 
         pass
     def print(self):
@@ -135,7 +154,9 @@ class Train_model_subpixel(Train_model_frontend):
 
         num_patches_max = 500
         # feed into the network
-        pred_res = self.net(patches[:num_patches_max, ...].to(self.device)) # tensor [1, N, 2]
+        amp_ctx = autocast(dtype=self.amp_dtype) if self.use_amp else nullcontext()
+        with amp_ctx:
+            pred_res = self.net(patches[:num_patches_max, ...].to(self.device))  # tensor [1, N, 2]
 
 
 
@@ -177,8 +198,13 @@ class Train_model_subpixel(Train_model_frontend):
         # print("losses: ", losses)
 
         if train:
-            loss.backward()
-            self.optimizer.step()
+            if self.grad_scaler is not None:
+                self.grad_scaler.scale(loss).backward()
+                self.grad_scaler.step(self.optimizer)
+                self.grad_scaler.update()
+            else:
+                loss.backward()
+                self.optimizer.step()
 
         self.tb_scalar_dict(losses, task)
         if n_iter % tb_interval == 0 or task == 'val':
