@@ -254,24 +254,61 @@ if experiment_name:
         )
         if overlays:
             for f, base_img, overlay_img, conf_img, legend_map in overlays[:10]:
-                # display confidence overlay when available
-                display_img = conf_img if conf_img is not None else overlay_img
-                st.image(display_img, caption=os.path.relpath(f, NPZ_SEARCH_PATH), channels="RGB", use_column_width=True)
+                # create three columns for original, overlay, and confidence
+                col_base, col_overlay, col_conf = st.columns(3)
+
+                # -- Column 1: original image --
+                with col_base:
+                    st.image(base_img, caption="Base Image", channels="RGB", use_column_width=True)
+                    # allow user to download the base image
+                    buf = BytesIO()
+                    Image.fromarray(base_img).save(buf, format="PNG")
+                    buf.seek(0)
+                    st.download_button(
+                        "Download Image",
+                        data=buf,
+                        file_name=os.path.basename(f) + "_base.png",
+                        mime="image/png",
+                    )
+
+                # -- Column 2: overlay of mask and keypoints --
+                with col_overlay:
+                    st.image(overlay_img, caption="Overlay", channels="RGB", use_column_width=True)
+                    buf = BytesIO()
+                    Image.fromarray(overlay_img).save(buf, format="PNG")
+                    buf.seek(0)
+                    st.download_button(
+                        "Download Image",
+                        data=buf,
+                        file_name=os.path.basename(f) + "_overlay.png",
+                        mime="image/png",
+                    )
+
+                # -- Column 3: confidence or error heatmap if available --
+                with col_conf:
+                    if conf_img is not None:
+                        st.image(conf_img, caption="Confidence Map", channels="RGB", use_column_width=True)
+                        buf = BytesIO()
+                        Image.fromarray(conf_img).save(buf, format="PNG")
+                        buf.seek(0)
+                        st.download_button(
+                            "Download Image",
+                            data=buf,
+                            file_name=os.path.basename(f) + "_conf.png",
+                            mime="image/png",
+                        )
+                    else:
+                        st.write("No confidence map available")
+
+                # display color legend below each row when segmentation classes exist
                 if legend_map is not None:
                     st.markdown("**Class Color Legend:**")
                     for idx, color in enumerate(legend_map):
                         color_hex = '#%02x%02x%02x' % tuple(color)
-                        st.markdown(f"<span style='display:inline-block;width:15px;height:15px;background-color:{color_hex};margin-right:10px'></span> Class {idx}", unsafe_allow_html=True)
-                # save displayed overlay to PNG in memory for download
-                buffer = BytesIO()
-                Image.fromarray(display_img).save(buffer, format="PNG")
-                buffer.seek(0)
-                st.download_button(
-                    "Download Image",
-                    data=buffer,
-                    file_name=os.path.basename(f) + ".png",
-                    mime="image/png",
-                )
+                        st.markdown(
+                            f"<span style='display:inline-block;width:15px;height:15px;background-color:{color_hex};margin-right:10px'></span> Class {idx}",
+                            unsafe_allow_html=True,
+                        )
         else:
             st.info("No .npz prediction overlays found in this folder.")
 else:
