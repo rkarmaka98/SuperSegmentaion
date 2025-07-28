@@ -187,7 +187,8 @@ if experiment_name:
         overlays = load_npz_images(NPZ_SEARCH_PATH, selected_npz_folder)
         if overlays:
             for f, img, legend_map in overlays[:10]:
-                st.image(img, caption=os.path.relpath(f, NPZ_SEARCH_PATH), channels="RGB", use_column_width='auto')
+                # Streamlit expects a boolean for use_column_width
+                st.image(img, caption=os.path.relpath(f, NPZ_SEARCH_PATH), channels="RGB", use_column_width=True)
                 if legend_map is not None:
                     st.markdown("**Class Color Legend:**")
                     for idx, color in enumerate(legend_map):
