@@ -154,6 +154,60 @@ def draw_matches(rgb1, rgb2, match_pairs, lw = 0.5, color='g', if_fig=True,
         plt.show()
 
 
+def draw_matches_overlay(img1, img2, matches, color=(0, 255, 0), radius=2, thickness=1):
+    """Return an image showing ``img1`` and ``img2`` side by side with match lines.
+
+    Parameters
+    ----------
+    img1 : np.ndarray
+        First image in ``H x W`` or ``H x W x 3`` format.
+    img2 : np.ndarray
+        Second image in ``H x W`` or ``H x W x 3`` format.
+    matches : np.ndarray
+        Array of shape ``(N, 4)`` containing ``[x1, y1, x2, y2]`` pairs.
+    color : tuple, optional
+        BGR color of the lines.
+    radius : int, optional
+        Radius of circles drawn on match points.
+    thickness : int, optional
+        Line thickness.
+
+    Returns
+    -------
+    np.ndarray
+        Combined overlay image.
+    """
+
+    # Ensure both images are 3 channel BGR
+    img1 = img1.copy()
+    img2 = img2.copy()
+    if img1.ndim == 2:
+        img1 = cv2.cvtColor(img1, cv2.COLOR_GRAY2BGR)
+    if img2.ndim == 2:
+        img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
+
+    h1, w1 = img1.shape[:2]
+    h2, w2 = img2.shape[:2]
+
+    # create canvas wide enough for both images
+    canvas = np.zeros((max(h1, h2), w1 + w2, 3), dtype=img1.dtype)
+    canvas[:h1, :w1] = img1
+    canvas[:h2, w1:w1 + w2] = img2
+
+    # draw each match as a line between the two images
+    for m in matches:
+        x1, y1, x2, y2 = map(int, m[:4])
+        pt1 = (x1, y1)
+        # second point is shifted by ``w1`` so that it aligns with ``img2``
+        pt2 = (x2 + w1, y2)
+        # draw connection line and endpoints for visualization
+        cv2.line(canvas, pt1, pt2, color, thickness)
+        cv2.circle(canvas, pt1, radius, color, -1)
+        cv2.circle(canvas, pt2, radius, color, -1)
+
+    return canvas
+
+
 
 # from utils.draw import draw_matches_cv
 def draw_matches_cv(data):

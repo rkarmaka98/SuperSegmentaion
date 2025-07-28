@@ -7,6 +7,7 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 from glob import glob
 import cv2
 import matplotlib.colors as mcolors
+from utils.draw import draw_matches_overlay
 from PIL import Image
 from io import BytesIO  # needed for download_button buffer
 
@@ -86,6 +87,9 @@ def overlay_keypoints(image, keypoints, color=(0, 255, 0)):
 
 def overlay_matches(image, kpts1, kpts2, matches, color=(255, 0, 0)):
     """Draw match lines between two sets of keypoints on the image."""
+    # Each match is rendered as a line connecting the paired
+    # keypoints; when only indices are provided we look them up
+    # in ``kpts1`` and ``kpts2``.
     img = image.copy()
     for m in matches:
         if len(m) >= 4:
@@ -132,7 +136,26 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
                 overlay_img = overlay_keypoints(overlay_img, kpts)
 
             if show_matches and matches is not None:
-                overlay_img = overlay_matches(overlay_img, kpts1, kpts2, matches)
+                second_img = data.get('image2') or data.get('warped_image')
+                if second_img is not None and matches.size > 0:
+                    # convert match indices to coordinate pairs when necessary
+                    match_coords = []
+                    for m in matches:
+                        if len(m) >= 4:
+                            pt1, pt2 = m[:2], m[2:4]
+                        elif kpts1 is not None and kpts2 is not None and len(m) >= 2:
+                            pt1, pt2 = kpts1[int(m[0])], kpts2[int(m[1])]
+                        else:
+                            continue
+                        match_coords.append([pt1[0], pt1[1], pt2[0], pt2[1]])
+                    if match_coords:
+                        # draw lines on a side-by-side canvas of both images
+                        overlay_img = draw_matches_overlay(
+                            overlay_img, second_img.astype(np.uint8), np.array(match_coords)
+                        )
+                else:
+                    # fallback to drawing matches on a single image
+                    overlay_img = overlay_matches(overlay_img, kpts1, kpts2, matches)
 
             conf_img = None
             if show_conf and conf is not None:
