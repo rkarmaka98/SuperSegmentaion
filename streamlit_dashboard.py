@@ -70,8 +70,30 @@ def load_tensorboard_scalars(log_dir, scalar_tags):
                 scalars[tag] = [s.value for s in ea.Scalars(tag)]
     return steps, scalars
 
-def colorize_mask(mask, num_classes):
-    color_map = np.array([mcolors.to_rgb(LEGEND_COLORS[i % len(LEGEND_COLORS)]) for i in range(num_classes)]) * 255
+def neon_color_map(num_classes):
+    """Generate a list of bright neon RGB colors."""
+    # Evenly spread hues over [0,1] with full saturation and value
+    hsv = np.stack([
+        np.linspace(0, 1, num_classes, endpoint=False),
+        np.ones(num_classes),
+        np.ones(num_classes),
+    ], axis=1)
+    rgb = mcolors.hsv_to_rgb(hsv) * 255
+    return rgb.astype(np.uint8)
+
+
+def colorize_mask(mask, num_classes, neon=False):
+    """Colorize class indices using either the default or neon palette."""
+    if neon:
+        color_map = neon_color_map(num_classes)
+    else:
+        color_map = (
+            np.array(
+                [mcolors.to_rgb(LEGEND_COLORS[i % len(LEGEND_COLORS)]) for i in range(num_classes)]
+            )
+            * 255
+        )
+
     h, w = mask.shape
     mask_rgb = np.zeros((h, w, 3), dtype=np.uint8)
     for i in range(num_classes):
@@ -102,7 +124,14 @@ def overlay_matches(image, kpts1, kpts2, matches, color=(255, 0, 0)):
         cv2.line(img, (int(pt1[0]), int(pt1[1])), (int(pt2[0]), int(pt2[1])), color, 1)
     return img
 
-def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, show_matches=False, show_conf=False):
+def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, show_matches=False, show_conf=False, neon_colors=False):
+    """Load .npz files and render overlay images.
+
+    Parameters
+    ----------
+    neon_colors : bool
+        When True, masks are colored with a vivid neon palette.
+    """
     folder_path = os.path.join(base_path, selected_folder)
     npz_files = glob(os.path.join(folder_path, '**', '*.npz'), recursive=True)
     overlays = []
@@ -128,8 +157,11 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
             legend_map = None
 
             if show_seg and pred_mask is not None and pred_mask.ndim == 2:
-                num_classes = int(max(pred_mask.max(), gt_mask.max() if gt_mask is not None else 0)) + 1
-                pred_color, legend_map = colorize_mask(pred_mask, num_classes)
+                num_classes = int(
+                    max(pred_mask.max(), gt_mask.max() if gt_mask is not None else 0)
+                ) + 1
+                # use neon palette when requested
+                pred_color, legend_map = colorize_mask(pred_mask, num_classes, neon=neon_colors)
                 overlay_img = cv2.addWeighted(overlay_img, 0.5, pred_color, 0.5, 0)
 
             if show_kpts and kpts is not None:
@@ -164,7 +196,8 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
                 conf_img = cv2.addWeighted(overlay_img.copy(), 0.6, heatmap, 0.4, 0)
 
             if gt_mask is not None and pred_mask is not None and pred_mask.ndim == 2:
-                gt_color, _ = colorize_mask(gt_mask, num_classes)
+                # colorize GT mask using the same palette
+                gt_color, _ = colorize_mask(gt_mask, num_classes, neon=neon_colors)
                 gt_overlay = cv2.addWeighted(base_img, 0.5, gt_color, 0.5, 0)
                 overlay_img = np.concatenate([gt_overlay, overlay_img], axis=1)
                 if conf_img is not None:
@@ -208,6 +241,8 @@ with st.sidebar:
     show_matches = st.checkbox("Show matching lines", value=False)
     # Toggle rendering confidence heatmap overlay
     show_conf = st.checkbox("Show confidence heatmap", value=False)
+    # Optionally switch to neon colored masks
+    show_neon = st.checkbox("Neon coloring", value=False)
 
 if experiment_name:
     log_path = os.path.join(BASE_LOG_DIR, experiment_name)
@@ -251,6 +286,7 @@ if experiment_name:
             show_kpts=show_kpts,
             show_matches=show_matches,
             show_conf=show_conf,
+            neon_colors=show_neon,
         )
         if overlays:
             for f, base_img, overlay_img, conf_img, legend_map in overlays[:10]:
