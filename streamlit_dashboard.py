@@ -124,11 +124,21 @@ with st.sidebar:
     st.header("Settings")
     experiments = list_all_experiment_folders(BASE_LOG_DIR)
     experiment_name = st.selectbox("Select experiment folder", experiments)
+    event_files = glob(os.path.join(os.path.join(BASE_LOG_DIR, experiment_name), "events.out.tfevents.*"))
+    if event_files:
+        ea = EventAccumulator(event_files[0])
+        ea.Reload()
+        available_scalar_tags = ea.Tags().get('scalars', [])
+    else:
+        available_scalar_tags = []
+
+    valid_scalar_tags = [t for t in ALL_SCALAR_TAGS if t in available_scalar_tags]
     scalar_tags = st.multiselect(
         "Select scalars to visualize",
-        options=ALL_SCALAR_TAGS,
-        default=IMPORTANT_TAGS,
+        options=valid_scalar_tags,
+        default=[t for t in IMPORTANT_TAGS if t in valid_scalar_tags],
         format_func=lambda tag: f"{tag} - {TAG_DESCRIPTIONS.get(tag, 'No description')}"
+    )}"
     )
     show_npz_overlay = st.checkbox("Show .npz overlay previews from logs/", value=True)
     if show_npz_overlay:
@@ -183,4 +193,6 @@ if experiment_name:
 else:
     st.info("Use the sidebar to select an experiment and scalar tags.")
 # This code is a Streamlit dashboard for visualizing training metrics and overlays from SuperPoint experiments.
-# It allows users to select an experiment folder, view scalar metrics from TensorBoard logs, and display overlays from .npz files containing keypoint predictions and segmentation masks.
+# It allows users to select an experiment folder, view scalar metrics from TensorBoard logs, and optionally display overlays from .npz files containing keypoint predictions and segmentation masks.
+# The dashboard includes features for dynamically loading available scalar tags, visualizing keypoint detection metrics, and displaying image overlays with segmentation masks and keypoints.
+# The user can also download the displayed images directly from the dashboard.
