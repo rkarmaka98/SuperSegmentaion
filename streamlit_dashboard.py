@@ -327,7 +327,8 @@ if experiment_name:
                         y=tags,
                         labels={"value": "Value", "variable": "Metric"},
                     )
-                    st.plotly_chart(fig)
+                    fig.update_layout(template="plotly_dark")  # match dark theme
+                    st.plotly_chart(fig, use_container_width=True)  # ensure full width
         else:
             st.warning("No valid data found in TensorBoard logs.")
 
