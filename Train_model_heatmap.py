@@ -19,6 +19,8 @@ import logging
 from utils.tools import dict_update
 from evaluation import overlay_mask  # for visualizing segmentation
 from evaluation import compute_miou  # mIoU computation utility
+from torch.cuda.amp import autocast, GradScaler  # AMP utilities
+from contextlib import nullcontext
 
 # from utils.utils import labels2Dto3D, flattenDetection, labels2Dto3D_flattened
 # from utils.utils import pltImshow, saveImg
@@ -71,6 +73,10 @@ class Train_model_heatmap(Train_model_frontend):
             "compute_miou": False,
         },
         "data": {"gaussian_label": {"enable": False}},
+        # Mixed precision training options
+        "amp": False,
+        "amp_dtype": "fp16",
+        "grad_scaler": {"enabled": True, "init_scale": 65536, "growth_interval": 2000},
     }
 
     def __init__(self, config, save_path=Path("."), device="cpu", verbose=False):
@@ -95,6 +101,19 @@ class Train_model_heatmap(Train_model_frontend):
         self.compute_miou = self.config["model"].get("compute_miou", False)
         self.seg_loss_fn = DiceLoss(mode='multiclass', from_logits=True)
         self.max_iter = config["train_iter"]
+
+        # automatic mixed precision settings
+        self.use_amp = self.config.get("amp", False)
+        dtype = self.config.get("amp_dtype", "fp16")
+        self.amp_dtype = torch.float16 if dtype == "fp16" else torch.bfloat16
+        gs_conf = self.config.get("grad_scaler", {})
+        if self.use_amp and gs_conf.get("enabled", True):
+            self.grad_scaler = GradScaler(
+                init_scale=gs_conf.get("init_scale", 65536),
+                growth_interval=gs_conf.get("growth_interval", 2000),
+            )
+        else:
+            self.grad_scaler = None
 
         self.gaussian = False
         if self.config["data"]["gaussian_label"]["enable"]:
@@ -251,24 +270,26 @@ class Train_model_heatmap(Train_model_frontend):
         # zero the parameter gradients
         self.optimizer.zero_grad()
 
-        # forward + backward + optimize
+        # forward pass under autocast
         if train:
-            # print("img: ", img.shape, ", img_warp: ", img_warp.shape)
-            outs = self.net(img.to(self.device))
-            semi, coarse_desc = outs["semi"], outs["desc"]
-            seg_pred = outs.get("segmentation")  # segmentation logits if present
-            if if_warp:
-                outs_warp = self.net(img_warp.to(self.device))
-                semi_warp, coarse_desc_warp = outs_warp["semi"], outs_warp["desc"]
-        else:
-            with torch.no_grad():
+            amp_ctx = autocast(dtype=self.amp_dtype) if self.use_amp else nullcontext()
+            with amp_ctx:
                 outs = self.net(img.to(self.device))
                 semi, coarse_desc = outs["semi"], outs["desc"]
-                seg_pred = outs.get("segmentation")  # segmentation logits if present
+                seg_pred = outs.get("segmentation")
                 if if_warp:
                     outs_warp = self.net(img_warp.to(self.device))
                     semi_warp, coarse_desc_warp = outs_warp["semi"], outs_warp["desc"]
-                pass
+        else:
+            with torch.no_grad():
+                amp_ctx = autocast(dtype=self.amp_dtype) if self.use_amp else nullcontext()
+                with amp_ctx:
+                    outs = self.net(img.to(self.device))
+                    semi, coarse_desc = outs["semi"], outs["desc"]
+                    seg_pred = outs.get("segmentation")
+                    if if_warp:
+                        outs_warp = self.net(img_warp.to(self.device))
+                        semi_warp, coarse_desc_warp = outs_warp["semi"], outs_warp["desc"]
 
         # detector loss -- skip when no keypoint labels are available
         from utils.utils import labels2Dto3D
@@ -463,8 +484,13 @@ class Train_model_heatmap(Train_model_frontend):
         self.input_to_imgDict(sample, self.images_dict)
 
         if train:
-            loss.backward()
-            self.optimizer.step()
+            if self.grad_scaler is not None:
+                self.grad_scaler.scale(loss).backward()
+                self.grad_scaler.step(self.optimizer)
+                self.grad_scaler.update()
+            else:
+                loss.backward()
+                self.optimizer.step()
 
         if n_iter % tb_interval == 0 or task == "val":
             logging.info(

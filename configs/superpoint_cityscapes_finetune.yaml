@@ -102,3 +102,11 @@ truncate: 1000
 pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_2300_checkpoint.pth.tar'
     # pretrained: 'logs/superpoint_coco_heat2_0/checkpoints/superPointNet_90000_checkpoint.pth.tar'
 
+# enable mixed precision training
+amp: true
+amp_dtype: fp16
+grad_scaler:
+    enabled: true
+    init_scale: 65536
+    growth_interval: 2000
+
