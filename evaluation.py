@@ -11,6 +11,8 @@ matplotlib.use('Agg') # solve error of tk
 import numpy as np
 from evaluations.descriptor_evaluation import compute_homography
 from evaluations.detector_evaluation import compute_repeatability
+from torch.utils.tensorboard import SummaryWriter
+from utils.utils import getWriterPath
 import cv2
 import matplotlib.pyplot as plt
 import json
@@ -120,6 +122,30 @@ def compute_miou(pred_mask, gt_mask, num_classes=None):
         ious.append(intersection / union)
 
     return float(np.mean(ious)) if ious else 0.0
+
+
+def compute_pixel_accuracy(pred_mask, gt_mask, num_classes=None):
+    """Return overall pixel accuracy and mean class accuracy."""
+    if pred_mask.shape != gt_mask.shape:
+        pred_mask = cv2.resize(pred_mask, (gt_mask.shape[1], gt_mask.shape[0]),
+                               interpolation=cv2.INTER_NEAREST)
+
+    overall = np.mean(pred_mask == gt_mask)
+
+    if num_classes is None:
+        classes = np.unique(gt_mask)
+    else:
+        classes = range(num_classes)
+
+    accs = []
+    for cls in classes:
+        cls_mask = gt_mask == cls
+        if cls_mask.sum() == 0:
+            continue
+        accs.append(np.mean(pred_mask[cls_mask] == cls))
+
+    mean_acc = float(np.mean(accs)) if accs else 0.0
+    return float(overall), mean_acc
 
 
 def colorize_mask(mask, num_classes=None, class_colors=None):
@@ -273,6 +299,7 @@ def evaluate(args, **options):
     # path = '/home/yoyee/Documents/SuperPoint/superpoint/logs/outputs/superpoint_coco/'
     path = args.path
     files = find_files_with_ext(path)
+    writer = SummaryWriter(getWriterPath(task='eval', exper_name=os.path.basename(path), date=True))
     correctness = []
     est_H_mean_dist = []
     repeatability = []
@@ -332,6 +359,7 @@ def evaluate(args, **options):
     from numpy.linalg import norm
     from utils.draw import draw_keypoints
     from utils.utils import saveImg
+    step = 0  # step counter for TensorBoard
 
     for f in tqdm(files):
         f_num = f[:-4]
@@ -353,6 +381,10 @@ def evaluate(args, **options):
                 if gt_key:
                     miou = compute_miou(pred_mask, data[gt_key])
                     segmentation_iou.append(miou)
+                    pixel_acc, class_acc = compute_pixel_accuracy(pred_mask, data[gt_key])
+                    writer.add_scalar("miou", miou, step)
+                    writer.add_scalar("pixel_acc", pixel_acc, step)
+                    writer.add_scalar("class_acc", class_acc, step)
 
                 if args.outputImg:
                     # visualize masks overlayed on the original image
@@ -406,6 +438,7 @@ def evaluate(args, **options):
             if local_err > 0:
                 localization_err.append(local_err)
                 print('local_err: ', local_err)
+            writer.add_scalar("repeatability", rep, step)
             if args.outputImg:
                 # img = to3dim(image)
                 img = image
@@ -458,6 +491,13 @@ def evaluate(args, **options):
             score = (result['inliers'].sum() * 2) / (keypoints.shape[0] + unwarped_pnts.shape[0])
             print("m. score: ", score)
             mscore.append(score)
+            if result['inliers'].size > 0:
+                match_precision = result['inliers'].sum() / result['inliers'].shape[0]
+            else:
+                match_precision = 0.0
+            match_recall = result['inliers'].sum() / keypoints.shape[0] if keypoints.shape[0] > 0 else 0.0
+            writer.add_scalar("match-precision", match_precision, step)
+            writer.add_scalar("match-recall", match_recall, step)
             # compute map
             if compute_map:
                 def getMatches(data):
@@ -641,6 +681,8 @@ def evaluate(args, **options):
                 draw_matches(image, warped_image, matches_temp, lw=1.0, 
                         filename=filename, show=False, if_fig=False)
 
+        step += 1
+
 
 
 
@@ -725,6 +767,7 @@ def evaluate(args, **options):
         filename,
         **dict_of_lists,
     )
+    writer.close()
 
 
 if __name__ == '__main__':

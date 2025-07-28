@@ -388,6 +388,18 @@ class Train_model_heatmap(Train_model_frontend):
                     ]
                     miou_batch = float(np.mean(miou_scores)) if miou_scores else 0.0
                 self.scalar_dict["miou"] = miou_batch
+                # also compute pixel and class accuracy
+                with torch.no_grad():
+                    p_acc = (pred_labels == seg_target).float().mean().item()
+                    class_accs = []
+                    for cls in range(n_classes):
+                        mask = (seg_target == cls)
+                        if mask.sum() == 0:
+                            continue
+                        class_accs.append((pred_labels[mask] == cls).float().mean().item())
+                    c_acc = float(np.mean(class_accs)) if class_accs else 0.0
+                self.scalar_dict["pixel_acc"] = p_acc
+                self.scalar_dict["class_acc"] = c_acc
 
         ##### try to minimize the error ######
         add_res_loss = False
