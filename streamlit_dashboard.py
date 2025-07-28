@@ -105,7 +105,8 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
     for f in sorted(npz_files):
         try:
             data = np.load(f)
-            base_img = data.get('image') or data.get('image1')
+            # use warped_image as last resort if neither image nor image1 exists
+            base_img = data.get('image') or data.get('image1') or data.get('warped_image')
             pred_mask = data.get('pred_mask') or data.get('segmentation_mask')
             gt_mask = data.get('gt_mask') or data.get('mask_gt') or data.get('segmentation_gt')
             conf = data.get('confidence')
