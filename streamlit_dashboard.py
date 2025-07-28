@@ -8,6 +8,7 @@ from glob import glob
 import cv2
 import matplotlib.colors as mcolors
 from PIL import Image
+from io import BytesIO  # needed for download_button buffer
 
 # --- Config ---
 BASE_LOG_DIR = 'runs/'
@@ -190,7 +191,16 @@ if experiment_name:
                     for idx, color in enumerate(legend_map):
                         color_hex = '#%02x%02x%02x' % tuple(color)
                         st.markdown(f"<span style='display:inline-block;width:15px;height:15px;background-color:{color_hex};margin-right:10px'></span> Class {idx}", unsafe_allow_html=True)
-                st.download_button("Download Image", data=Image.fromarray(img).tobytes(), file_name=os.path.basename(f) + ".png", mime="image/png")
+                # save overlay to PNG in memory for download
+                buffer = BytesIO()
+                Image.fromarray(img).save(buffer, format="PNG")
+                buffer.seek(0)
+                st.download_button(
+                    "Download Image",
+                    data=buffer,
+                    file_name=os.path.basename(f) + ".png",
+                    mime="image/png",
+                )
         else:
             st.info("No .npz prediction overlays found in this folder.")
 else:
