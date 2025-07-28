@@ -58,7 +58,11 @@ def load_tensorboard_scalars(log_dir, scalar_tags):
         if not any(tag in available_tags for tag in scalar_tags):
             continue
         if not steps:
-            steps = [s.step for s in ea.Scalars(scalar_tags[0])]
+            # Use the first scalar tag that exists in this file to initialize steps
+            for t in scalar_tags:
+                if t in available_tags:
+                    steps = [s.step for s in ea.Scalars(t)]
+                    break
         for tag in scalar_tags:
             if tag in available_tags:
                 scalars[tag] = [s.value for s in ea.Scalars(tag)]
