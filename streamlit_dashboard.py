@@ -11,6 +11,23 @@ from utils.draw import draw_matches_overlay
 from PIL import Image
 from io import BytesIO  # needed for download_button buffer
 
+# ----- UI Styling -------------------------------------------------------------
+# Inject custom CSS to give the app a dark HUD like appearance.
+custom_css = """
+<style>
+body {background-color:#000; color:#39ff14;}
+.sidebar .sidebar-content {background-color:#111; color:#39ff14;}
+.hud-overlay {position:absolute; top:10px; right:10px; padding:5px;
+              background:rgba(0,0,0,0.6); border:1px solid #39ff14;
+              color:#39ff14; font-size:12px;}
+.legend-box {border:1px solid #39ff14; padding:2px 4px; margin-right:5px;
+             display:inline-block;}
+.legend-swatch {width:15px; height:15px; border:1px solid #39ff14;
+                display:inline-block;}
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
+
 # --- Config ---
 BASE_LOG_DIR = 'runs/'
 NPZ_SEARCH_PATH = 'logs/'
@@ -155,6 +172,7 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
 
             overlay_img = base_img.copy()
             legend_map = None
+            class_counts = None
 
             if show_seg and pred_mask is not None and pred_mask.ndim == 2:
                 num_classes = int(
@@ -163,6 +181,8 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
                 # use neon palette when requested
                 pred_color, legend_map = colorize_mask(pred_mask, num_classes, neon=neon_colors)
                 overlay_img = cv2.addWeighted(overlay_img, 0.5, pred_color, 0.5, 0)
+                # count pixels per class to show in legend later
+                class_counts = np.bincount(pred_mask.flatten(), minlength=num_classes)
 
             if show_kpts and kpts is not None:
                 overlay_img = overlay_keypoints(overlay_img, kpts)
@@ -203,7 +223,7 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
                 if conf_img is not None:
                     conf_img = np.concatenate([gt_overlay, conf_img], axis=1)
 
-            overlays.append((f, base_img, overlay_img, conf_img, legend_map))
+            overlays.append((f, base_img, overlay_img, conf_img, legend_map, class_counts))
         except Exception as e:
             continue
     return overlays
@@ -229,20 +249,48 @@ with st.sidebar:
         default=[t for t in IMPORTANT_TAGS if t in valid_scalar_tags],
         format_func=lambda tag: f"{tag} - {TAG_DESCRIPTIONS.get(tag, 'No description')}"
     )
-    show_npz_overlay = st.checkbox("Show .npz overlay previews from logs/", value=True)
+    sw, cb = st.columns([1,5])
+    with sw:
+        st.markdown("<span class='legend-swatch' style='background-color:#888' title='Preview overlays'></span>", unsafe_allow_html=True)
+    with cb:
+        show_npz_overlay = st.checkbox("Show .npz overlay previews from logs/", value=True)
     if show_npz_overlay:
         folder_candidates = sorted([f for f in os.listdir(NPZ_SEARCH_PATH) if os.path.isdir(os.path.join(NPZ_SEARCH_PATH, f))])
         selected_npz_folder = st.selectbox("Select subfolder from logs/", folder_candidates)
     # Toggle displaying predicted segmentation masks
-    show_seg = st.checkbox("Show segmentation", value=True)
+    c1, c2 = st.columns([1,5])
+    with c1:
+        st.markdown("<span class='legend-swatch' style='background-color:#39ff14' title='Segmentation overlay'></span>", unsafe_allow_html=True)
+    with c2:
+        show_seg = st.checkbox("Show segmentation", value=True)
+
     # Toggle overlaying detected keypoints
-    show_kpts = st.checkbox("Show keypoints", value=True)
+    c1, c2 = st.columns([1,5])
+    with c1:
+        st.markdown("<span class='legend-swatch' style='background-color:#ff00ff' title='Keypoint markers'></span>", unsafe_allow_html=True)
+    with c2:
+        show_kpts = st.checkbox("Show keypoints", value=True)
+
     # Toggle drawing match lines between keypoints
-    show_matches = st.checkbox("Show matching lines", value=False)
+    c1, c2 = st.columns([1,5])
+    with c1:
+        st.markdown("<span class='legend-swatch' style='background-color:#00ffff' title='Matching lines'></span>", unsafe_allow_html=True)
+    with c2:
+        show_matches = st.checkbox("Show matching lines", value=False)
+
     # Toggle rendering confidence heatmap overlay
-    show_conf = st.checkbox("Show confidence heatmap", value=False)
+    c1, c2 = st.columns([1,5])
+    with c1:
+        st.markdown("<span class='legend-swatch' style='background-color:#ff4500' title='Confidence heatmap'></span>", unsafe_allow_html=True)
+    with c2:
+        show_conf = st.checkbox("Show confidence heatmap", value=False)
+
     # Optionally switch to neon colored masks
-    show_neon = st.checkbox("Neon coloring", value=False)
+    c1, c2 = st.columns([1,5])
+    with c1:
+        st.markdown("<span class='legend-swatch' style='background-color:#ffff00' title='Use neon palette'></span>", unsafe_allow_html=True)
+    with c2:
+        show_neon = st.checkbox("Neon coloring", value=False)
 
 if experiment_name:
     log_path = os.path.join(BASE_LOG_DIR, experiment_name)
@@ -289,7 +337,7 @@ if experiment_name:
             neon_colors=show_neon,
         )
         if overlays:
-            for f, base_img, overlay_img, conf_img, legend_map in overlays[:10]:
+            for f, base_img, overlay_img, conf_img, legend_map, counts in overlays[:10]:
                 # create three columns for original, overlay, and confidence
                 col_base, col_overlay, col_conf = st.columns(3)
 
@@ -339,12 +387,14 @@ if experiment_name:
                 # display color legend below each row when segmentation classes exist
                 if legend_map is not None:
                     st.markdown("**Class Color Legend:**")
+                    legend_html = ""
                     for idx, color in enumerate(legend_map):
                         color_hex = '#%02x%02x%02x' % tuple(color)
-                        st.markdown(
-                            f"<span style='display:inline-block;width:15px;height:15px;background-color:{color_hex};margin-right:10px'></span> Class {idx}",
-                            unsafe_allow_html=True,
+                        count = int(counts[idx]) if counts is not None else 0
+                        legend_html += (
+                            f"<span class='legend-box' style='background-color:{color_hex}' title='Class {idx}'></span> {idx} ({count}) "
                         )
+                    st.markdown(legend_html, unsafe_allow_html=True)
         else:
             st.info("No .npz prediction overlays found in this folder.")
 else:
