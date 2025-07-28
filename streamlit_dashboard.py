@@ -138,7 +138,6 @@ with st.sidebar:
         options=valid_scalar_tags,
         default=[t for t in IMPORTANT_TAGS if t in valid_scalar_tags],
         format_func=lambda tag: f"{tag} - {TAG_DESCRIPTIONS.get(tag, 'No description')}"
-    )}"
     )
     show_npz_overlay = st.checkbox("Show .npz overlay previews from logs/", value=True)
     if show_npz_overlay:
