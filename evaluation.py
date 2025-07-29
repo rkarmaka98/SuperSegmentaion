@@ -307,6 +307,8 @@ def evaluate(args, **options):
     mAP = []
     localization_err = []
     segmentation_iou = []
+    # default value to avoid UnboundLocalError when homography evaluation is disabled
+    homography_thresh = []
     rep_thd = 3
     save_file = path + "/result.txt"
     inliers_method = 'cv'
@@ -754,7 +756,8 @@ def evaluate(args, **options):
         'repeatability': repeatability,
         'localization_err': localization_err,
         'correctness': np.array(correctness),
-        'homography_thresh': homography_thresh,
+        # store homography thresholds only when evaluated
+        'homography_thresh': homography_thresh if args.homography else [],
         'mscore': mscore,
         'mAP': np.array(mAP),
         'segmentation_iou': np.array(segmentation_iou),
