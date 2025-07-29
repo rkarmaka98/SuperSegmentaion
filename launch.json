@@ -1,0 +1,203 @@
+{
+    "configurations": [
+        
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": "${command:pickArgs}",
+        },
+
+            {
+            "name": "Training MagicPoint",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\train4.py",
+            "args": [
+                "train_base",
+                "configs/magicpoint_shapes_pair.yaml",
+                "magicpoint_synth",
+                "--eval"
+            ],
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            },
+            {
+            "name": "Exporting detections via Homography Adaptation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_detector_homoAdapt",
+                "configs/magicpoint_coco_export.yaml",
+                "magicpoint_synth_homoAdapt_coco"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            },
+            {
+            "name": "Training SuperPoint",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\train4.py",
+            "args": [
+                "train_joint",
+                "configs/superpoint_coco_train_heatmap.yaml",
+                "superpoint_coco",
+                "--eval",
+                "--debug"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            },
+            {
+            "name": "Export on Hpatches",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_descriptor",
+                "configs/magicpoint_repeatability_heatmap.yaml",
+                "superpoint_hpatches_test",
+                "--export-segmentation"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            },
+            {
+            "name": "Evaluating on Hpatches",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\evaluation.py",
+            "args": [
+                "logs/superpoint_hpatches_test/predictions",
+                "--repeatibility",
+                "--outputImg",
+                "--homography",
+                "--plotMatching",
+                "--evaluate-segmentation",
+                "--outputImg",
+                "--category-file",
+                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_cs34_categories.json"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            },
+            {
+            "name": "Exporting detections To Cityscape via Homography Adaptation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_detector_homoAdapt",
+                "configs/magicpoint_cityscape_export.yaml",
+                "magicpoint_synth_homoAdapt_cityscape"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": false
+            },
+            {
+            "name": "Finetuning on Cityscapes",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\train4.py",
+            "args": [
+                "train_joint",
+                "configs/superpoint_cityscapes_finetune.yaml",
+                "superpoint_cityscapes",
+                "--eval",
+                "--debug"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            },
+            {
+            "name": "Export on Cityscapes",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_descriptor",
+                "configs/superpoint_cityscapes_export.yaml",
+                "cityscapes_export",
+                "--export-segmentation"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            },
+            {
+            "name": "Evaluating on Cityscapes",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\evaluation.py",
+            "args": [
+                "logs/cityscapes_export/predictions",
+                "--repeatibility",
+                "--homography",
+                "--plotMatching",
+                "--evaluate-segmentation",
+                "--outputImg",
+                "--category-file",
+                "${workspaceFolder}\\utils\\cs4_categories.json"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            },
+            {
+            "name": "Export on Coco",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\export.py",
+            "args": [
+                "export_descriptor",
+                "configs/superpoint_coco_export.yaml",
+                "coco_export",
+                "--export-segmentation"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            },
+            {
+            "name": "Evaluating on Coco",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\evaluation.py",
+            "args": [
+                "logs/coco_export/predictions",
+                "--repeatibility",
+                "--homography",
+                "--plotMatching",
+                "--evaluate-segmentation",
+                "--outputImg",
+                "--category-file",
+                "${workspaceFolder}\\datasets\\COCO\\annotations\\panoptic_cs34_categories.json"
+            ],
+            "python": "C:\\Users\\advan\\miniconda3\\envs\\py310-sp\\python.exe",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+            "justMyCode": true
+            }
+    ]
+
+}
