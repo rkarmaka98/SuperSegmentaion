@@ -166,7 +166,11 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
             kpts2 = data.get('keypoints2')
             if base_img is None:
                 continue
-            base_img = base_img.astype(np.uint8)
+            # exported images are normalized in [0,1], scale to 0-255 for display
+            if base_img.dtype != np.uint8:
+                base_img = cv2.convertScaleAbs(base_img, alpha=255.0)
+            else:
+                base_img = base_img.copy()
             if base_img.ndim == 2:
                 base_img = np.stack([base_img]*3, axis=-1)
 
