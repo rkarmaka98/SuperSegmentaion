@@ -401,7 +401,8 @@ class Train_model_heatmap(Train_model_frontend):
             assert seg_target.max() < n_classes and seg_target.min() >= 0, (
                 f"Segmentation labels must be in [0, {n_classes-1}]"
             )
-            seg_loss = self.seg_loss_fn(seg_pred, seg_target)
+            # convert back to float32 for loss computation when using AMP
+            seg_loss = self.seg_loss_fn(seg_pred.float(), seg_target)
             loss += self.lambda_segmentation * seg_loss
 
             # compute batch mean IoU when enabled
