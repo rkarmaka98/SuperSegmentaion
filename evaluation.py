@@ -490,7 +490,13 @@ def evaluate(args, **options):
             from numpy.linalg import inv
             H, W = image.shape
             unwarped_pnts = warpLabels(warped_keypoints, inv(real_H), H, W)
-            score = (result['inliers'].sum() * 2) / (keypoints.shape[0] + unwarped_pnts.shape[0])
+            # deduplicate here since repeated points inflate the denominator
+            # when computing the matching score
+            unique_kpts = np.unique(keypoints, axis=0)
+            unique_unwarp = np.unique(unwarped_pnts, axis=0)
+            denom = unique_kpts.shape[0] + unique_unwarp.shape[0]
+            score = (result['inliers'].sum() * 2) / denom if denom > 0 else 0.0
+            score = min(score, 1.0)
             print("m. score: ", score)
             mscore.append(score)
             if result['inliers'].size > 0:
