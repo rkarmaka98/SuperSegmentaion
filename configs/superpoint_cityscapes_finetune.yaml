@@ -41,24 +41,24 @@ data:
     warped_pair:
         enable: true
         params:
-            translation: true
+            translation: false
             rotation: true
             scaling: true
             perspective: false
-            scaling_amplitude: 0.05
+            scaling_amplitude: 0.03
             perspective_amplitude_x: 0.01
             perspective_amplitude_y: 0.01
             patch_ratio: 0.9
-            max_angle: 0.05
+            max_angle: 0.03
             allow_artifacts: true
             num_homographies: 1
-        valid_border_margin: 0
+        valid_border_margin: 4
 
 front_end_model: 'Train_model_heatmap'  # use heatmap detector
 training:
-    workers_train: 8
-    workers_val: 2
-    workers_test: 2
+    workers_train: 16
+    workers_val: 4
+    workers_test: 4
 
 model:
     name: 'SuperPointNet_gauss2'
@@ -66,15 +66,15 @@ model:
     detector_loss:
         loss_type: 'softmax'
 
-    batch_size: 8
-    eval_batch_size: 8
+    batch_size: 4
+    eval_batch_size: 4
     learning_rate: 0.0001  # reasonable learning rate
-    detection_threshold: 0.015
-    lambda_loss: 0.3
+    detection_threshold: 0.005
+    lambda_loss: 1.0
     lambda_segmentation: 1.0
     num_segmentation_classes: 4
     compute_miou: true  # log mIoU for each batch
-    nms: 5
+    nms: 3
     dense_loss:
         enable: false
         params:
@@ -83,30 +83,34 @@ model:
     sparse_loss:
         enable: true
         params:
-            num_matching_attempts: 100
-            num_masked_non_matches_per_match: 20
-            lamda_d: 0.5
+            num_matching_attempts: 1000
+            num_masked_non_matches_per_match: 50
+            lamda_d: 1
             dist: 'cos'
             method: '2d'
     other_settings: 'train 2d, gauss 0.2'
+    lr_scheduler:
+        name: 'step'
+        step_size: 30000
+        gamma: 0.5
 
 retrain: True
 reset_iter: True
-train_iter: 100 #170000
-validation_interval: 10 #2000
-tensorboard_interval: 25
-save_interval: 25 #2000
+train_iter: 50000 #40000 #170000
+validation_interval: 1000 #2000
+tensorboard_interval: 100
+save_interval: 1000 #2000
 validation_size: 5
-truncate: 1000
+truncate: 
 
-pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_2300_checkpoint.pth.tar'
+pretrained: 'logs/superpoint_coco/checkpoints/superPointNet_100000_checkpoint.pth.tar'
     # pretrained: 'logs/superpoint_coco_heat2_0/checkpoints/superPointNet_90000_checkpoint.pth.tar'
 
 # enable mixed precision training
-amp: true
-amp_dtype: fp16
-grad_scaler:
-    enabled: true
-    init_scale: 65536
-    growth_interval: 2000
+# amp: true
+# amp_dtype: fp16
+# grad_scaler:
+#     enabled: true
+#     init_scale: 1024
+#     growth_interval: 2000
 

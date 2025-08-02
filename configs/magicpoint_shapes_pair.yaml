@@ -68,7 +68,7 @@ data:
 front_end_model: 'Train_model_heatmap'  # 'Train_model_frontend'
 
 training:
-    workers_train: 8
+    workers_train: 16
     workers_val: 8
     workers_test: 8
 
@@ -107,7 +107,7 @@ model:
 retrain: True # set true for new model
 reset_iter: True
 
-train_iter: 10000 # 200000
+train_iter: 100000 # 200000
 tensorboard_interval: 1000 # 200
 save_interval: 1000 # 2000
 validation_interval: 500 # one validation of entire val set every N training steps

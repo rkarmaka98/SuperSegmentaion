@@ -196,8 +196,13 @@ class Train_model_heatmap(Train_model_frontend):
             loss_func = nn.MSELoss(reduction="mean")
             loss = loss_func(input, target)
         elif loss_type == "softmax":
-            loss_func_BCE = nn.BCELoss(reduction='none').cuda()
-            loss = loss_func_BCE(nn.functional.softmax(input, dim=1), target)
+            # BCELoss requires input and target to share the same dtype; when
+            # using mixed precision ``input`` may be half while ``target`` is
+            # float. Cast target to input dtype to avoid type mismatch errors.
+            loss_func_BCE = nn.BCELoss(reduction="none").cuda()
+            pred = nn.functional.softmax(input, dim=1)
+            target = target.to(pred.dtype)
+            loss = loss_func_BCE(pred, target)
             loss = (loss.sum(dim=1) * mask).sum()
             loss = loss / (mask.sum() + 1e-10)
         return loss
@@ -396,7 +401,8 @@ class Train_model_heatmap(Train_model_frontend):
             assert seg_target.max() < n_classes and seg_target.min() >= 0, (
                 f"Segmentation labels must be in [0, {n_classes-1}]"
             )
-            seg_loss = self.seg_loss_fn(seg_pred, seg_target)
+            # convert back to float32 for loss computation when using AMP
+            seg_loss = self.seg_loss_fn(seg_pred.float(), seg_target)
             loss += self.lambda_segmentation * seg_loss
 
             # compute batch mean IoU when enabled

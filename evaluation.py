@@ -480,17 +480,24 @@ def evaluate(args, **options):
                 """
                 from utils.utils import warp_points
                 from utils.utils import filter_points
-                pnts = torch.tensor(pnts).long()
+                pnts = torch.tensor(pnts).float()
                 homography = torch.tensor(homography, dtype=torch.float32)
                 warped_pnts = warp_points(torch.stack((pnts[:, 0], pnts[:, 1]), dim=1),
                                           homography)  # check the (x, y)
-                warped_pnts = filter_points(warped_pnts, torch.tensor([W, H])).round().long()
+                warped_pnts = filter_points(warped_pnts, torch.tensor([W, H])).float()
                 return warped_pnts.numpy()
 
             from numpy.linalg import inv
             H, W = image.shape
             unwarped_pnts = warpLabels(warped_keypoints, inv(real_H), H, W)
-            score = (result['inliers'].sum() * 2) / (keypoints.shape[0] + unwarped_pnts.shape[0])
+            # score = (result['inliers'].sum() * 2) / (keypoints.shape[0] + unwarped_pnts.shape[0])
+            # deduplicate here since repeated points inflate the denominator
+            # when computing the matching score
+            unique_kpts = np.unique(keypoints, axis=0)
+            unique_unwarp = np.unique(unwarped_pnts, axis=0)
+            denom = unique_kpts.shape[0] + unique_unwarp.shape[0]
+            score = (result['inliers'].sum() * 2) / denom if denom > 0 else 0.0
+            score = min(score, 1.0)
             print("m. score: ", score)
             mscore.append(score)
             if result['inliers'].size > 0:

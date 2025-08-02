@@ -783,7 +783,7 @@ class Train_model_frontend(object):
         """
         for element in list(losses):
             # print ('add to tb: ', element)
-            if element=='miou':
+            if element in ['miou','pixel_acc','class_acc']:
                 print(task, "-", element, ": ", losses[element])
             else:
                 print(task, "-", element, ": ", losses[element].item())

@@ -15,7 +15,7 @@ data:
             valid_border_margin: 3
     homography_adaptation:
         enable: true
-        num: 50 # 100
+        num: 10 # 100
         aggregation: 'sum'
         filter_counts: 0
         homographies:
@@ -33,7 +33,7 @@ data:
            enable: false
 
 training:
-    workers_train: 8
+    workers_train: 16
     workers_val: 2
     workers_test: 2
 
@@ -42,8 +42,8 @@ model:
     name: 'SuperPointNet_gauss2' # 'SuperPointNet_gauss2'
     params: {
     }    
-    batch_size: 8
-    eval_batch_size: 8
+    batch_size: 64
+    eval_batch_size: 6
     detection_threshold: 0.015 # 0.015
     nms: 4
     top_k: 600

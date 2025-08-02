@@ -28,7 +28,7 @@ data:
                 patch_ratio: 0.85
 
 training:
-    workers_train: 8
+    workers_train: 16
     workers_val: 8
     workers_test: 8
 
@@ -37,8 +37,8 @@ model:
     name: 'SuperPointNet_gauss2' # 'SuperPointNet_gauss2'
     params: {
     }    
-    batch_size: 1
-    eval_batch_size: 1
+    batch_size: 128
+    eval_batch_size: 8
     detection_threshold: 0.015 # 0.015
     nms: 4
     top_k: 600
@@ -46,6 +46,6 @@ model:
         enable: true
 
 # pretrained: 'logs/magicpoint_synth20/checkpoints/superPointNet_200000_checkpoint.pth.tar' # 'SuperPointNet'
-pretrained: 'logs/magicpoint_synth/checkpoints/superPointNet_10000_checkpoint.pth.tar' # Newer version with 100k iterations
+pretrained: 'logs/magicpoint_synth/checkpoints/superPointNet_100000_checkpoint.pth.tar' # Newer version with 100k iterations
 
 
