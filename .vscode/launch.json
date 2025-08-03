@@ -154,6 +154,8 @@
                 "--plotMatching",
                 "--evaluate-segmentation",
                 "--outputImg",
+                "--inlier-pixel-threshold",
+                "3.5",
                 "--category-file",
                 "${workspaceFolder}\\utils\\cs4_categories.json"
             ],

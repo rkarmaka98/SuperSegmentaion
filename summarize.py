@@ -64,6 +64,13 @@ def summarize(data):
                     out[key] = np.nan
                 else:
                     out[key] = float(np.mean(corr_arr[:, i]))
+    
+    # Segmentation IOU
+    seg_iou = data.get('segmentation_iou')
+    if seg_iou is None or len(seg_iou)==0:
+        out['Segmentation IOU'] = np.nan
+    else:
+        out['Segmentation IOU'] = float(np.mean(seg_iou))
     return out
 
 def main():
@@ -84,17 +91,17 @@ def main():
         if data is None:
             # skip or add NaN row
             row = {'Task': name,
-                   'Homography@1': np.nan, 'Homography@3': np.nan, 'Homography@5': np.nan,
+                    'Homography@3': np.nan, 'Homography@5': np.nan,
                    'Repeatability': np.nan, 'MLE': np.nan,
-                   'NN mAP': np.nan, 'Matching Score': np.nan}
+                   'NN mAP': np.nan, 'Matching Score': np.nan, 'Segmentation IOU': np.nan}
         else:
             summ = summarize(data)
             summ['Task'] = name
             row = summ
         rows.append(row)
     df = pd.DataFrame(rows, columns=[
-        'Task', 'Homography@1', 'Homography@3', 'Homography@5',
-        'Repeatability', 'MLE', 'NN mAP', 'Matching Score'
+        'Task', 'Homography@3', 'Homography@5',
+        'Repeatability', 'MLE', 'NN mAP', 'Matching Score', 'Segmentation IOU'
     ])
     # Print table
     print(df.to_string(index=False))
