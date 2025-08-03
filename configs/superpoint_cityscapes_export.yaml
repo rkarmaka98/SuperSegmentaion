@@ -7,9 +7,9 @@ data:
     alteration: 'all'                # 'all' 'i' 'v'
     export_folder: 'val'             # choose split
     root: 'datasets/Cityscapes'      # path to Cityscapes images
-    segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
+    segmentation_labels: 'datasets/Cityscapes/gtFine_1024'  # downscaled masks
     preprocessing:
-        resize: [512, 1024] #[512, 1024]
+        resize: [512, 1024]  # match training resolution
     reduce_to_4_categories: true
     # generate a warped image pair similar to the training setup
     warped_pair:

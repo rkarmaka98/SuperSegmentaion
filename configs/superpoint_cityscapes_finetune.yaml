@@ -5,7 +5,7 @@ data:
     dataset: 'Cityscapes'
     root: 'datasets/Cityscapes'  # path to Cityscapes images
     labels: logs/magicpoint_synth_homoAdapt_cityscape/predictions
-    segmentation_labels: 'datasets/Cityscapes/gtFine'  # segmentation masks
+    segmentation_labels: 'datasets/Cityscapes/gtFine_1024'  # downscaled masks
     cache_in_memory: false
     load_segmentation: true
     reduce_to_4_categories: true
@@ -15,7 +15,7 @@ data:
         params:
             GaussianBlur: {sigma: 0.2}
     preprocessing:
-        resize: [512, 1024] #[512, 1024]  # images are downsampled for training
+        resize: [512, 1024]  # images are downsampled for training
     augmentation:
         photometric:
             enable: true
