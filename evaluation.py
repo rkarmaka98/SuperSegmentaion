@@ -10,7 +10,7 @@ matplotlib.use('Agg') # solve error of tk
 
 import numpy as np
 from evaluations.descriptor_evaluation import compute_homography
-from evaluations.detector_evaluation import compute_repeatability
+from evaluations.detector_evaluation import compute_repeatability, warp_keypoints
 from torch.utils.tensorboard import SummaryWriter
 from utils.utils import getWriterPath
 import cv2
@@ -468,6 +468,17 @@ def evaluate(args, **options):
             result = compute_homography(data, correctness_thresh=homography_thresh)
             correctness.append(result['correctness'])
             # est_H_mean_dist.append(result['mean_dist'])
+            # Re-label matches within a small pixel error as inliers to cope with
+            # the 1 px noise present in Cityscapes ground truth.
+            if result['matches'].size > 0 and args.inlier_pixel_threshold >= 0:
+                # Warp keypoints using ground-truth homography to measure error
+                gt_warped = warp_keypoints(result['matches'][:, :2], real_H)
+                err = np.linalg.norm(gt_warped - result['matches'][:, 2:4], axis=1)
+                close = err <= args.inlier_pixel_threshold
+                if result['inliers'].size == err.size:
+                    result['inliers'] = np.logical_or(result['inliers'].astype(bool), close)
+                else:
+                    result['inliers'] = close
             # compute matching score
             def warpLabels(pnts, homography, H, W):
                 import torch
@@ -565,9 +576,13 @@ def evaluate(args, **options):
                         return np.zeros(matches.shape[0], dtype=bool)
 
                     # Estimate the homography between the matches using RANSAC
-                    H, inliers = cv2.findHomography(matches[:, [0, 1]],
-                                                    matches[:, [2, 3]],
-                                                    cv2.RANSAC)
+                    # and the provided pixel threshold.
+                    H, inliers = cv2.findHomography(
+                        matches[:, [0, 1]],
+                        matches[:, [2, 3]],
+                        cv2.RANSAC,
+                        epi,
+                    )
                     inliers = inliers.flatten()
                     print("Total matches: ", inliers.shape[0],
                           ", inliers: ", inliers.sum(),
@@ -596,11 +611,27 @@ def evaluate(args, **options):
                 if inliers_method == 'gt':
                     # use ground truth homography
                     print("use ground truth homography for inliers")
-                    inliers = getInliers(matches, real_H, epi=3, verbose=verbose)
+                    inliers = getInliers(
+                        matches,
+                        real_H,
+                        epi=args.inlier_pixel_threshold,
+                        verbose=verbose,
+                    )
                 else:
                     # use opencv estimation as inliers
                     print("use opencv estimation for inliers")
-                    inliers = getInliers_cv(matches, real_H, epi=3, verbose=verbose)
+                    inliers = getInliers_cv(
+                        matches,
+                        real_H,
+                        epi=args.inlier_pixel_threshold,
+                        verbose=verbose,
+                    )
+                # Ensure small reprojection errors are counted as inliers.
+                err = np.linalg.norm(
+                    warp_keypoints(matches[:, :2], real_H) - matches[:, 2:4],
+                    axis=1,
+                )
+                inliers = np.logical_or(inliers, err <= args.inlier_pixel_threshold)
                     
                 ## distance to confidence
                 if args.sift:
@@ -793,6 +824,13 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--repeatibility', action='store_true')
     parser.add_argument('-homo', '--homography', action='store_true')
     parser.add_argument('-plm', '--plotMatching', action='store_true')
+    parser.add_argument(
+        '--inlier-pixel-threshold',
+        type=float,
+        default=1.0,
+        help='Treat matches with reprojection error <= this many pixels as inliers.\n'
+             'Helps avoid marking correct matches as wrong on noisy datasets like Cityscapes.',
+    )
     parser.add_argument(
         '--evaluate-segmentation',
         action='store_true',
