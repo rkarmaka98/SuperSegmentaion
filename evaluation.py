@@ -25,12 +25,12 @@ from utils.custom_logging import *
 
 def draw_matches_cv(data, matches, plot_points=True):
     if plot_points:
-        keypoints1 = [cv2.KeyPoint(p[1], p[0], 1) for p in data['keypoints1']]
-        keypoints2 = [cv2.KeyPoint(p[1], p[0], 1) for p in data['keypoints2']]
+        keypoints1 = [cv2.KeyPoint(p[1], p[0], 0.1) for p in data['keypoints1']]
+        keypoints2 = [cv2.KeyPoint(p[1], p[0], 0.1) for p in data['keypoints2']]
     else:
         matches_pts = data['matches']
-        keypoints1 = [cv2.KeyPoint(p[0], p[1], 1) for p in matches_pts]
-        keypoints2 = [cv2.KeyPoint(p[2], p[3], 1) for p in matches_pts]
+        keypoints1 = [cv2.KeyPoint(p[0], p[1], 0.1) for p in matches_pts]
+        keypoints2 = [cv2.KeyPoint(p[2], p[3], 0.1) for p in matches_pts]
         print(f"matches_pts: {matches_pts}")
         # keypoints1, keypoints2 = [], []
 
@@ -52,7 +52,7 @@ def draw_matches_cv(data, matches, plot_points=True):
         return cv2.convertScaleAbs(img32, alpha=255.0)
 
     return cv2.drawMatches(to_uint8(img1), keypoints1, to_uint8(img2), keypoints2, matches,
-                           None, matchColor=(0,255,0), singlePointColor=(0, 0, 255))
+                           None, matchColor=(0,240,0), singlePointColor=(150, 150, 150))
 
 def isfloat(value):
   try:
@@ -175,10 +175,10 @@ def colorize_mask(mask, num_classes=None, class_colors=None):
             # sensible default palette for the 4 Cityscapes categories
             colors = np.array(
                 [
-                    [0, 0, 255],     # static structure (blue)
-                    [0, 255, 0],     # flat surfaces   (green)
-                    [255, 0, 0],     # dynamic objects (red)
-                    [255, 255, 255], # unstable/ambiguous (white)
+                    [255,   0, 170],   # static structure → violet
+                    [255, 191,   0],   # flat surfaces   → sky blue (BGR)
+                    [0,   69, 255],    # dynamic objects → strong orange-red
+                    [128, 128, 128],   # unstable        → gray
                 ],
                 dtype=float,
             ) / 255.0
@@ -759,12 +759,14 @@ def evaluate(args, **options):
                             result_stable['inliers'] = result['inliers'][stable]
                         result_stable['image1'] = overlay_mask(image, mask1, alpha=0.5,
                                                                class_names=class_names,
-                                                               class_colors=class_colors)
+                                                               class_colors=None)
                         result_stable['image2'] = overlay_mask(warped_image, mask2, alpha=0.5,
                                                                class_names=class_names,
-                                                               class_colors=class_colors)
+                                                               class_colors=None)
                         matches_stable = result_stable['cv2_matches']
-                        img_stable = draw_matches_cv(result_stable, matches_stable, plot_points=True)
+                        ratio = 0.1
+                        ran_idx = np.random.choice(matches_stable.shape[0], int(matches_stable.shape[0]*ratio))
+                        img_stable = draw_matches_cv(result_stable, matches_stable[ran_idx], plot_points=True)
                         plot_imgs([img_stable], titles=['Stable class correspondences'], dpi=200)
                         plt.tight_layout()
                         plt.savefig(path_stable + '/' + f_num + 'cv.png', bbox_inches='tight')
