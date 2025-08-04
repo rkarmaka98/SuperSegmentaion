@@ -353,6 +353,10 @@ def evaluate(args, **options):
         if args.evaluate_segmentation:
             path_seg = path + '/segmentation'
             os.makedirs(path_seg, exist_ok=True)
+        if args.stable_matching:
+            # save visualizations restricted to static/flat classes
+            path_stable = path + '/stable_matching'
+            os.makedirs(path_stable, exist_ok=True)
 
     # for i in range(2):
     #     f = files[i]
@@ -729,6 +733,40 @@ def evaluate(args, **options):
                 plt.close('all')
                 # pltImshow(img)
 
+                if args.stable_matching and 'segmentation_mask' in data.files:
+                    # overlay segmentation and visualize matches only for static/flat classes
+                    mask1 = data['segmentation_mask']
+                    mask2 = cv2.warpPerspective(mask1, real_H, (mask1.shape[1], mask1.shape[0]),
+                                                flags=cv2.INTER_NEAREST)
+                    coords = result['matches'].astype(int)
+                    # clip coordinates to image bounds to avoid indexing errors
+                    h, w = mask1.shape
+                    coords[:, 0] = np.clip(coords[:, 0], 0, w - 1)
+                    coords[:, 1] = np.clip(coords[:, 1], 0, h - 1)
+                    coords[:, 2] = np.clip(coords[:, 2], 0, w - 1)
+                    coords[:, 3] = np.clip(coords[:, 3], 0, h - 1)
+                    stable = np.isin(mask1[coords[:, 1], coords[:, 0]], [0, 1]) & \
+                             np.isin(mask2[coords[:, 3], coords[:, 2]], [0, 1])
+                    if np.any(stable):
+                        result_stable = dict(result)
+                        # keep only keypoints and inliers for stable matches
+                        result_stable['keypoints1'] = result['keypoints1'][stable]
+                        result_stable['keypoints2'] = result['keypoints2'][stable]
+                        if result['inliers'].size == stable.size:
+                            result_stable['inliers'] = result['inliers'][stable]
+                        result_stable['image1'] = overlay_mask(image, mask1, alpha=0.5,
+                                                               class_names=class_names,
+                                                               class_colors=class_colors)
+                        result_stable['image2'] = overlay_mask(warped_image, mask2, alpha=0.5,
+                                                               class_names=class_names,
+                                                               class_colors=class_colors)
+                        matches_stable = np.array(result['cv2_matches'])[stable]
+                        img_stable = draw_matches_cv(result_stable, matches_stable, plot_points=True)
+                        plot_imgs([img_stable], titles=['Stable class correspondences'], dpi=200)
+                        plt.tight_layout()
+                        plt.savefig(path_stable + '/' + f_num + 'cv.png', bbox_inches='tight')
+                        plt.close('all')
+
         if args.plotMatching:
             matches = result['matches'] # np [N x 4]
             if matches.shape[0] > 0:
@@ -857,6 +895,11 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--repeatibility', action='store_true')
     parser.add_argument('-homo', '--homography', action='store_true')
     parser.add_argument('-plm', '--plotMatching', action='store_true')
+    parser.add_argument(
+        '--stable-matching',
+        action='store_true',
+        help='overlay segmentation masks and show matches only on static/flat classes',
+    )
     parser.add_argument(
         '--inlier-pixel-threshold',
         type=float,
