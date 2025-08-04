@@ -102,12 +102,20 @@ datasets/ ($DATA_DIR)
     |   |-- train
     |   |-- val
     |   `-- test
-    `-- gtFine
+    |-- gtFine            # original labels
+    `-- gtFine_1024       # 512x1024 masks from resize_cityscapes_masks.py
         |-- train
         |-- val
         `-- test
 ```
 - If the dataset is stored elsewhere, update `DATA_PATH` in `settings.py`.
+
+Run `datasets/resize_cityscapes_masks.py` once to create the `gtFine_1024`
+folder and ensure the masks match the 512×1024 training resolution:
+
+```bash
+python datasets/resize_cityscapes_masks.py datasets/Cityscapes
+```
 
 Example commands using the Cityscapes configs:
 
@@ -124,6 +132,10 @@ python export.py export_descriptor configs/superpoint_cityscapes_export.yaml cit
 # evaluate exported segmentation
 python evaluation.py logs/cityscapes_export/predictions --evaluate-segmentation
 ```
+
+For presentations you can upsample prediction masks back to the original
+Cityscapes resolution using nearest-neighbor interpolation before overlaying
+them on the images.
 
 To visualize the 4-category mapping, pass `--category-file utils/cs4_categories.json`
 to `evaluation.py`.

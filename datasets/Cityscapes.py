@@ -38,7 +38,7 @@ class Cityscapes(data.Dataset):
     # default configuration similar to Coco dataset
     default_config = {
         'labels': None,
-        'segmentation_labels': None,
+        'segmentation_labels': None,  # optional path to segmentation masks
         'num_segmentation_classes': 34,
         # optionally map the 34 labelIds to 4 coarse categories
         'reduce_to_4_categories': False,
@@ -95,10 +95,16 @@ class Cityscapes(data.Dataset):
         # gaussian heatmap flag
         self.gaussian_label = self.config.get('gaussian_label', {}).get('enable', False)
 
-        # root directory with leftImg8bit/ and gtFine/ folders
+        # root directory with leftImg8bit/ and optionally resized gtFine masks
         self.root = Path(self.config.get('root', Path(DATA_PATH, 'Cityscapes')))
         img_root = self.root / 'leftImg8bit' / self.split
-        self.mask_root = self.root / 'gtFine' / self.split
+        seg_dir = self.config.get('segmentation_labels')
+        if seg_dir:
+            # use custom mask directory when provided (e.g. downscaled gtFine_1024)
+            self.mask_root = Path(seg_dir) / self.split
+        else:
+            # default to original gtFine masks
+            self.mask_root = self.root / 'gtFine' / self.split
 
         image_paths = sorted(img_root.rglob('*_leftImg8bit.png'))
         if self.config.get('truncate'):
