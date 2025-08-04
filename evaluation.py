@@ -749,9 +749,10 @@ def evaluate(args, **options):
                              np.isin(mask2[coords[:, 3], coords[:, 2]], [0, 1])
                     if np.any(stable):
                         result_stable = dict(result)
-                        # keep only keypoints and inliers for stable matches
-                        result_stable['keypoints1'] = result['keypoints1'][stable]
-                        result_stable['keypoints2'] = result['keypoints2'][stable]
+                        # boolean mask `stable` corresponds to matches, not all keypoints;
+                        # keep keypoint arrays intact and filter match-related data instead
+                        result_stable['cv2_matches'] = np.array(result['cv2_matches'])[stable]
+                        result_stable['matches'] = result['matches'][stable]
                         if result['inliers'].size == stable.size:
                             result_stable['inliers'] = result['inliers'][stable]
                         result_stable['image1'] = overlay_mask(image, mask1, alpha=0.5,
@@ -760,7 +761,7 @@ def evaluate(args, **options):
                         result_stable['image2'] = overlay_mask(warped_image, mask2, alpha=0.5,
                                                                class_names=class_names,
                                                                class_colors=class_colors)
-                        matches_stable = np.array(result['cv2_matches'])[stable]
+                        matches_stable = result_stable['cv2_matches']
                         img_stable = draw_matches_cv(result_stable, matches_stable, plot_points=True)
                         plot_imgs([img_stable], titles=['Stable class correspondences'], dpi=200)
                         plt.tight_layout()
