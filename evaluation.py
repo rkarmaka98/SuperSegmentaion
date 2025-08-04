@@ -374,6 +374,8 @@ def evaluate(args, **options):
         data = np.load(path + '/' + f)
         print("load successfully. ", f)
 
+        pred_mask = None  # store predicted mask for reuse outside this block
+
         if args.evaluate_segmentation:
             # Look for typical predicted and ground-truth mask keys
             pred_key = next((k for k in ['pred_mask', 'segmentation_mask', 'mask_pred']
@@ -384,7 +386,7 @@ def evaluate(args, **options):
             if pred_key is None:
                 logging.warning(f"No predicted mask found in {f}")
             else:
-                pred_mask = smooth_mask(data[pred_key])
+                pred_mask = smooth_mask(data[pred_key])  # keep in scope for stable matching
                 # compute segmentation metrics when gt mask is available
                 if gt_key:
                     miou = compute_miou(pred_mask, data[gt_key])
@@ -395,7 +397,7 @@ def evaluate(args, **options):
                     writer.add_scalar("class_acc", class_acc, step)
 
                 if args.outputImg:
-                    # visualize masks overlayed on the original image
+                    # visualize predicted mask over the original image
                     base_img = data['image']
 
                     # Upsample predicted mask to match original image resolution before visualization
@@ -735,9 +737,9 @@ def evaluate(args, **options):
                 plt.close('all')
                 # pltImshow(img)
 
-                if args.stable_matching and 'segmentation_mask' in data.files:
-                    # overlay segmentation and visualize matches only for static/flat classes
-                    mask1 = data['segmentation_mask']
+                if args.stable_matching and pred_mask is not None:
+                    # overlay predicted segmentation and visualize matches only for static/flat classes
+                    mask1 = pred_mask
                     mask2 = cv2.warpPerspective(mask1, real_H, (mask1.shape[1], mask1.shape[0]),
                                                 flags=cv2.INTER_NEAREST)
                     coords = result['matches'].astype(int)
