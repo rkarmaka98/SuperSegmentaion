@@ -1,0 +1,48 @@
+# Export configuration for a short Cityscapes sequence demo
+# This duplicates the standard Cityscapes export settings but
+# limits the number of frames and writes results to a demo folder.
+data:
+    name: 'Cityscapes'
+    dataset: 'Cityscapes'              # reuse existing dataloader
+    alteration: 'all'
+    export_folder: 'superpoint_export_demo'  # store outputs in new folder
+    root: 'datasets/Cityscapes/leftImg8bit_sequence/test/berlin'  # path to Berlin test sequence
+    segmentation_labels: null
+    preprocessing:
+        resize: [512, 1024]            # keep training resolution
+    truncate: 51                       # limit to a few seconds at 17 Hz
+    reduce_to_4_categories: false
+    warped_pair:
+        enable: false
+        params: {}
+        valid_border_margin: 4
+training:
+    workers_train: 4
+    workers_val: 1
+    workers_test: 1
+
+front_end_model: 'Val_model_heatmap'
+
+model:
+    name: 'SuperPointNet_gauss2'
+    params: {}
+    lambda_segmentation: 1.0
+    num_segmentation_classes: 4
+    batch_size: 32
+    eval_batch_size: 32
+    learning_rate: 0.001
+    detection_threshold: 0.005
+    nms: 4
+    top_k: 500
+    nn_thresh: 0.7
+    homography_adaptation:
+        num: 0
+    subpixel:
+        enable: true
+        patch_size: 5
+    rand_noise:
+        enable: false
+        sigma: 0.2
+    pretrained: 'logs/superpoint_cityscapes/checkpoints/superPointNet_50000_checkpoint.pth.tar'
+
+eval_iter: 50
