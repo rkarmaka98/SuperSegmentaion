@@ -46,6 +46,9 @@ def draw_matches_cv(data, matches, plot_points=True):
     img2 = ensure_color(data['image2'])
 
     def to_uint8(img32):
+        if img32.dtype == np.uint8:
+            # Avoid scaling already uint8 images to prevent value overflow
+            return img32
         return cv2.convertScaleAbs(img32, alpha=255.0)
 
     return cv2.drawMatches(to_uint8(img1), keypoints1, to_uint8(img2), keypoints2, matches,
