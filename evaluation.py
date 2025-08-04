@@ -391,10 +391,43 @@ def evaluate(args, **options):
                 if args.outputImg:
                     # visualize masks overlayed on the original image
                     base_img = data['image']
-                    imgs = [overlay_mask(base_img, pred_mask, class_names=class_names, class_colors=class_colors)]
+
+                    # Upsample predicted mask to match original image resolution before visualization
+                    pred_mask_vis = pred_mask
+                    if pred_mask_vis.shape != base_img.shape[:2]:
+                        pred_mask_vis = cv2.resize(
+                            pred_mask_vis,
+                            (base_img.shape[1], base_img.shape[0]),
+                            interpolation=cv2.INTER_NEAREST,
+                        )
+                    imgs = [
+                        overlay_mask(
+                            base_img,
+                            pred_mask_vis,
+                            alpha=0.3,  # blend mask at 30%
+                            class_names=class_names,
+                            class_colors=class_colors,
+                        )
+                    ]
                     titles = ['pred overlay']
                     if gt_key:
-                        imgs.append(overlay_mask(base_img, data[gt_key], class_names=class_names, class_colors=class_colors))
+                        # Upsample ground truth mask to original resolution for fair comparison
+                        gt_mask_vis = data[gt_key]
+                        if gt_mask_vis.shape != base_img.shape[:2]:
+                            gt_mask_vis = cv2.resize(
+                                gt_mask_vis,
+                                (base_img.shape[1], base_img.shape[0]),
+                                interpolation=cv2.INTER_NEAREST,
+                            )
+                        imgs.append(
+                            overlay_mask(
+                                base_img,
+                                gt_mask_vis,
+                                alpha=0.3,  # blend mask at 30%
+                                class_names=class_names,
+                                class_colors=class_colors,
+                            )
+                        )
                         titles.append('gt overlay')
 
                     plot_imgs(imgs, titles=titles, dpi=200)

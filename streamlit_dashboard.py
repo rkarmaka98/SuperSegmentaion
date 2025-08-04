@@ -179,12 +179,26 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
             class_counts = None
 
             if show_seg and pred_mask is not None and pred_mask.ndim == 2:
+                # resize predicted (and GT) masks to the original image resolution
+                if pred_mask.shape[:2] != overlay_img.shape[:2]:
+                    pred_mask = cv2.resize(
+                        pred_mask,
+                        (overlay_img.shape[1], overlay_img.shape[0]),
+                        interpolation=cv2.INTER_NEAREST,
+                    )
+                    if gt_mask is not None and gt_mask.shape[:2] != overlay_img.shape[:2]:
+                        gt_mask = cv2.resize(
+                            gt_mask,
+                            (overlay_img.shape[1], overlay_img.shape[0]),
+                            interpolation=cv2.INTER_NEAREST,
+                        )
                 num_classes = int(
                     max(pred_mask.max(), gt_mask.max() if gt_mask is not None else 0)
                 ) + 1
                 # use neon palette when requested
                 pred_color, legend_map = colorize_mask(pred_mask, num_classes, neon=neon_colors)
-                overlay_img = cv2.addWeighted(overlay_img, 0.5, pred_color, 0.5, 0)
+                # blend prediction over image with 70/30 weighting
+                overlay_img = cv2.addWeighted(overlay_img, 0.7, pred_color, 0.3, 0)
                 # count pixels per class to show in legend later
                 class_counts = np.bincount(pred_mask.flatten(), minlength=num_classes)
 
@@ -222,7 +236,8 @@ def load_npz_images(base_path, selected_folder, show_seg=True, show_kpts=True, s
             if gt_mask is not None and pred_mask is not None and pred_mask.ndim == 2:
                 # colorize GT mask using the same palette
                 gt_color, _ = colorize_mask(gt_mask, num_classes, neon=neon_colors)
-                gt_overlay = cv2.addWeighted(base_img, 0.5, gt_color, 0.5, 0)
+                # blend GT mask over base image using the same 70/30 weighting
+                gt_overlay = cv2.addWeighted(base_img, 0.7, gt_color, 0.3, 0)
                 overlay_img = np.concatenate([gt_overlay, overlay_img], axis=1)
                 if conf_img is not None:
                     conf_img = np.concatenate([gt_overlay, conf_img], axis=1)
