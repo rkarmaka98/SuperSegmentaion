@@ -154,6 +154,7 @@
                 "--plotMatching",
                 "--evaluate-segmentation",
                 "--outputImg",
+                "--stable-matching",
                 "--inlier-pixel-threshold",
                 "3.5",
                 "--category-file",
