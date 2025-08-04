@@ -37,14 +37,13 @@ def draw_matches_cv(data, matches, plot_points=True):
     inliers = data['inliers'].astype(bool)
     # matches = np.array(data['matches'])[inliers].tolist()
     # matches = matches[inliers].tolist()
-    def to3dim(img):
-        if img.ndim == 2:
-            img = img[:, :, np.newaxis]
+    def ensure_color(img):
+        if img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 1):
+            # Convert grayscale to BGR to avoid cv2.drawMatches errors
+            return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         return img
-    img1 = to3dim(data['image1'])
-    img2 = to3dim(data['image2'])
-    img1 = np.concatenate([img1, img1, img1], axis=2)
-    img2 = np.concatenate([img2, img2, img2], axis=2)
+    img1 = ensure_color(data['image1'])
+    img2 = ensure_color(data['image2'])
 
     def to_uint8(img32):
         return cv2.convertScaleAbs(img32, alpha=255.0)

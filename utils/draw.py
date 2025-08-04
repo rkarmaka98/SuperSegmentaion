@@ -215,15 +215,16 @@ def draw_matches_cv(data):
     keypoints2 = [cv2.KeyPoint(p[1], p[0], 1) for p in data['keypoints2']]
     inliers = data['inliers'].astype(bool)
     matches = np.array(data['matches'])[inliers].tolist()
-    def to3dim(img):
-        if img.ndim == 2:
-            img = img[:, :, np.newaxis]
+    def ensure_color(img):
+        if img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 1):
+            # Convert grayscale to BGR to avoid cv2.drawMatches errors
+            return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         return img
-    img1 = to3dim(data['image1'])
-    img2 = to3dim(data['image2'])
-    img1 = np.concatenate([img1, img1, img1], axis=2)
-    img2 = np.concatenate([img2, img2, img2], axis=2)
-    return cv2.drawMatches(img1, keypoints1, img2, keypoints2, matches,
+    def to_uint8(img32):
+        return cv2.convertScaleAbs(img32, alpha=255.0)
+    img1 = ensure_color(data['image1'])
+    img2 = ensure_color(data['image2'])
+    return cv2.drawMatches(to_uint8(img1), keypoints1, to_uint8(img2), keypoints2, matches,
                            None, matchColor=(0,255,0), singlePointColor=(0, 0, 255))
 
 
