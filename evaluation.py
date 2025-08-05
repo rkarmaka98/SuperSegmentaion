@@ -807,7 +807,7 @@ def evaluate(args, **options):
                                                                class_names=class_names,
                                                                class_colors=None)
                         matches_stable = result_stable['cv2_matches']
-                        ratio = 0.1
+                        ratio = 0.3
                         ran_idx = np.random.choice(matches_stable.shape[0], int(matches_stable.shape[0]*ratio))
                         img_stable = draw_matches_cv(result_stable, matches_stable[ran_idx], plot_points=True)
                         plot_imgs([img_stable], titles=['Stable class correspondences'], dpi=200)
@@ -820,7 +820,7 @@ def evaluate(args, **options):
             if matches.shape[0] > 0:
                 from utils.draw import draw_matches
                 filename = path_match + '/' + f_num + 'm.png'
-                ratio = 0.1
+                ratio = 0.3
                 inliers = result['inliers']
 
                 matches_in = matches[inliers == True]
