@@ -197,7 +197,7 @@ def main():
             )
             # Compute per-frame metrics for overlay
             kp_count = pts0.shape[1]  # total keypoints in reference frame
-            match_score = float(matches[:, 2].mean()) if matches.size else 0.0
+            match_score = inliers.sum() / max(kp_count, 1)  # ratio of valid matches to total keypoints
             miou = (
                 compute_miou(seg0, seg1) if seg0 is not None and seg1 is not None else 0.0
             )
