@@ -69,7 +69,10 @@ def main():
     cv2.imwrite(str(out_dir / "heatmap_1.png"), (heat1_color[:, :, ::-1] * 255).astype(np.uint8))
 
     # Retrieve descriptor matches between the two frames.
-    matches = tracker.get_matches().T  # [L, 3] -> query, train, score
+    # ``PointTracker.get_matches`` returns pixel coordinates, but here we need
+    # descriptor indices to index into ``pts0`` and ``pts1``.  ``get_mscores``
+    # exposes the raw two-way NN matching output: [idx0, idx1, score].
+    matches = tracker.get_mscores().T  # [L, 3] -> query, train, score
     if matches.size == 0:
         print("No matches were found between the first two frames.")
         return
