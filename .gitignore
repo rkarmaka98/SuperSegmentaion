@@ -12,3 +12,4 @@ logs/
 notebooks/
 pretrained/
 datasets/Cityscapes/
+sequence_demo_output/
