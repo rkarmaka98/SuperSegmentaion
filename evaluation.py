@@ -92,6 +92,30 @@ def draw_matches_cv(
             # Draw keypoints manually so we can control color/radius.
             cv2.circle(canvas, pt1_int, point_radius, point_color, -1)
             cv2.circle(canvas, pt2_int, point_radius, point_color, -1)
+    # Add descriptive text labels after composing the canvas.
+    font = cv2.FONT_HERSHEY_SIMPLEX  # Use a simple, readable font.
+    # Label the left panel showing the original video frame.
+    cv2.putText(
+        canvas,
+        "Original video",
+        (10, 30),  # Position near the top-left corner.
+        font,
+        1.0,
+        (255, 255, 255),
+        thickness=2,
+        lineType=cv2.LINE_AA,
+    )
+    # Label the right panel containing segmentation and matching results.
+    cv2.putText(
+        canvas,
+        "Segmentation & Matching",
+        (w1 + 10, 30),  # Offset by width of left image.
+        font,
+        1.0,
+        (255, 255, 255),
+        thickness=2,
+        lineType=cv2.LINE_AA,
+    )
 
     return canvas
 
