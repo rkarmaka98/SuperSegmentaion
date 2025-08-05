@@ -7,7 +7,8 @@ import numpy as np
 import cv2
 
 from Val_model_heatmap import Val_model_heatmap
-from evaluation import overlay_mask, draw_matches_cv
+# import metrics utilities for visualization
+from evaluation import overlay_mask, draw_matches_cv, compute_miou, compute_repeatability, draw_metrics_box
 from utils.cityscapes_camera import (
     load_cityscapes_camera,
     simulate_ego_motion,
@@ -194,6 +195,34 @@ def main():
                 point_color=point_color,
                 point_radius=point_radius,
             )
+            # Compute per-frame metrics for overlay
+            kp_count = pts0.shape[1]  # total keypoints in reference frame
+            match_score = float(matches[:, 2].mean()) if matches.size else 0.0
+            miou = (
+                compute_miou(seg0, seg1) if seg0 is not None and seg1 is not None else 0.0
+            )
+            if kpts1.size and kpts2.size:
+                rep_data = {
+                    "prob": np.hstack([kpts1, np.ones((kpts1.shape[0], 1))]),
+                    "warped_prob": np.hstack([kpts2, np.ones((kpts2.shape[0], 1))]),
+                    "image": img0_raw,
+                    "homography": H,
+                }
+                repeatability, _ = compute_repeatability(
+                    rep_data, keep_k_points=300, distance_thresh=3, verbose=False
+                )
+            else:
+                repeatability = 0.0
+
+            metrics = {
+                "Keypoints": kp_count,
+                "Matching Score": f"{match_score:.2f}",
+                "mIoU": f"{miou:.3f}",
+                "Repeatability": f"{repeatability:.3f}",
+            }
+            match_img = draw_metrics_box(match_img, metrics)
+
+            # Save visualization with metrics
             cv2.imwrite(str(seq_out / f"{img_path.stem}_matches.png"), match_img)
             np.savez(seq_out / f"{img_path.stem}_matches.npz", **data)
 
