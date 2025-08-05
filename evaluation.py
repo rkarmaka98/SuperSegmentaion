@@ -352,8 +352,18 @@ def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None, cla
     return overlay
 
 
-def draw_metrics_box(image, metrics_dict):
-    """Overlay a semi-transparent metrics box on the image."""
+def draw_metrics_box(image, metrics_dict, position="bottom-right"):
+    """Overlay a semi-transparent metrics box on the image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        The image on which to draw.
+    metrics_dict : dict
+        Dictionary of metric names and values.
+    position : str, optional
+        Corner position for the box (e.g. "top-right", "bottom-right").
+    """
     lines = [f"{k}: {v}" for k, v in metrics_dict.items()]
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.5
@@ -366,10 +376,23 @@ def draw_metrics_box(image, metrics_dict):
     box_height = line_height * len(lines) + margin
 
     h, w = image.shape[:2]
-    x1 = w - box_width - margin
-    y1 = h - box_height - margin
-    x2 = w - margin
-    y2 = h - margin
+
+    # Determine the top-left corner of the box based on desired position.
+    if position == "top-right":
+        x1 = w - box_width - margin
+        y1 = margin
+    elif position == "top-left":
+        x1 = margin
+        y1 = margin
+    elif position == "bottom-left":
+        x1 = margin
+        y1 = h - box_height - margin
+    else:  # default to bottom-right
+        x1 = w - box_width - margin
+        y1 = h - box_height - margin
+
+    x2 = x1 + box_width
+    y2 = y1 + box_height
 
     overlay = image.copy()
     cv2.rectangle(overlay, (x1, y1), (x2, y2), (0, 0, 0), -1)
@@ -377,8 +400,16 @@ def draw_metrics_box(image, metrics_dict):
 
     for i, text in enumerate(lines):
         y = y1 + margin + (i + 1) * line_height - 5
-        cv2.putText(image, text, (x1 + margin, y), font, font_scale,
-                    (255, 255, 255), thickness, cv2.LINE_AA)
+        cv2.putText(
+            image,
+            text,
+            (x1 + margin, y),
+            font,
+            font_scale,
+            (255, 255, 255),
+            thickness,
+            cv2.LINE_AA,
+        )
 
     return image
 
