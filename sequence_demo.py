@@ -95,8 +95,17 @@ def main():
     if seg0 is not None and seg1 is not None:
         img0_vis = overlay_mask(img0_np, seg0)
         img1_vis = overlay_mask(img1_np, seg1)
-        stable = np.isin(seg0[coords[:, 1], coords[:, 0]], [0, 1]) & \
-                 np.isin(seg1[coords[:, 3], coords[:, 2]], [0, 1])
+        # Segmentation maps are produced at lower resolution (1/4 of the input),
+        # so scale keypoint coordinates before indexing into seg0/seg1.
+        scale_y0 = seg0.shape[0] / img0_np.shape[0]
+        scale_x0 = seg0.shape[1] / img0_np.shape[1]
+        scale_y1 = seg1.shape[0] / img1_np.shape[0]
+        scale_x1 = seg1.shape[1] / img1_np.shape[1]
+        y0 = np.clip((coords[:, 1] * scale_y0).astype(int), 0, seg0.shape[0] - 1)
+        x0 = np.clip((coords[:, 0] * scale_x0).astype(int), 0, seg0.shape[1] - 1)
+        y1 = np.clip((coords[:, 3] * scale_y1).astype(int), 0, seg1.shape[0] - 1)
+        x1 = np.clip((coords[:, 2] * scale_x1).astype(int), 0, seg1.shape[1] - 1)
+        stable = np.isin(seg0[y0, x0], [0, 1]) & np.isin(seg1[y1, x1], [0, 1])
     else:
         img0_vis, img1_vis = img0_np, img1_np
         stable = np.ones(matches.shape[0], dtype=bool)
