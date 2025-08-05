@@ -51,9 +51,10 @@ def main():
         seq_out = out_root / seq_dir.name
         seq_out.mkdir(parents=True, exist_ok=True)
 
-        # Process consecutive frame pairs.
+        tracker.clear_desc()  # clear tracker once per new sequence
+
+        # Process consecutive frame pairs without resetting descriptors
         for i in range(len(image_paths) - 1):
-            tracker.clear_desc()  # start fresh for each pair
 
             # --- First frame of the pair ---
             img0 = load_frame(image_paths[i]).to(device)
