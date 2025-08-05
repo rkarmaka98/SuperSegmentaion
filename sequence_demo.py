@@ -125,6 +125,10 @@ def main():
             val_agent.run(img1)
             pts1 = val_agent.heatmap_to_pts()[0]
             desc1 = val_agent.desc_to_sparseDesc()[0]
+            seg1 = None
+            if "segmentation" in val_agent.outs:
+                # predict segmentation for warped frame independently
+                seg1 = val_agent.outs["segmentation"].argmax(dim=1).cpu().numpy()[0]
 
             # Perform two-way nearest-neighbor matching without tracking.
             matches = nn_match_two_way(desc0, desc1, val_agent.nn_thresh).T
@@ -136,13 +140,6 @@ def main():
                 coords = np.zeros((0, 4), dtype=int)
                 inliers = np.zeros(0, dtype=bool)
                 cv2_matches = []
-                seg1 = (
-                    cv2.warpPerspective(
-                        seg0, H, (seg0.shape[1], seg0.shape[0]), flags=cv2.INTER_NEAREST
-                    )
-                    if seg0 is not None
-                    else None
-                )
             else:
                 cv2_matches = [
                     cv2.DMatch(int(m[0]), int(m[1]), float(m[2])) for m in matches
@@ -154,16 +151,13 @@ def main():
                 coords[:, 2] = pts1[0, matches[:, 1].astype(int)]  # x2
                 coords[:, 3] = pts1[1, matches[:, 1].astype(int)]  # y2
 
-                seg1 = None
-                if seg0 is not None:
-                    # Warp the segmentation mask with the same homography used on the image.
-                    seg1 = cv2.warpPerspective(seg0, H, (seg0.shape[1], seg0.shape[0]), flags=cv2.INTER_NEAREST)
+                if seg0 is not None and seg1 is not None:
                     h, w = seg0.shape
                     coords[:, 0] = np.clip(coords[:, 0], 0, w - 1)
                     coords[:, 1] = np.clip(coords[:, 1], 0, h - 1)
                     coords[:, 2] = np.clip(coords[:, 2], 0, w - 1)
                     coords[:, 3] = np.clip(coords[:, 3], 0, h - 1)
-                    # Keep matches only if both points belong to static/flat classes.
+                    # filter matches to static/flat classes from both predictions
                     stable = np.isin(seg0[coords[:, 1], coords[:, 0]], [0, 1]) & \
                              np.isin(seg1[coords[:, 3], coords[:, 2]], [0, 1])
                     coords = coords[stable]
@@ -200,7 +194,7 @@ def main():
             match_score = float(matches[:, 2].mean()) if matches.size else 0.0
             miou = (
                 compute_miou(seg0, seg1) if seg0 is not None and seg1 is not None else 0.0
-            )
+            )  # mIoU now compares seg1 predicted directly on img1
             if kpts1.size and kpts2.size:
                 rep_data = {
                     "prob": np.hstack([kpts1, np.ones((kpts1.shape[0], 1))]),
@@ -210,7 +204,7 @@ def main():
                 }
                 repeatability, _ = compute_repeatability(
                     rep_data, keep_k_points=300, distance_thresh=3, verbose=False
-                )
+                )  # repeatability recomputed with independently inferred seg1
             else:
                 repeatability = 0.0
 
