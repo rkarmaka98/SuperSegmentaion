@@ -78,38 +78,51 @@ def main():
 
             # Retrieve descriptor matches between the two frames.
             matches = tracker.get_mscores().T  # [L,3] -> query, train, score
-            if matches.size == 0:
-                continue
 
             # Prepare keypoint coordinates in (y, x) order for draw_matches_cv.
             kpts1 = pts0[[1, 0], :].T
             kpts2 = pts1[[1, 0], :].T
-            cv2_matches = [
-                cv2.DMatch(int(m[0]), int(m[1]), float(m[2])) for m in matches
-            ]
-            inliers = np.ones(matches.shape[0], dtype=bool)
 
-            # Compute pixel coordinates of the matched keypoints.
-            coords = np.zeros((matches.shape[0], 4), dtype=int)
-            coords[:, 0] = pts0[0, matches[:, 0].astype(int)]  # x1
-            coords[:, 1] = pts0[1, matches[:, 0].astype(int)]  # y1
-            coords[:, 2] = pts1[0, matches[:, 1].astype(int)]  # x2
-            coords[:, 3] = pts1[1, matches[:, 1].astype(int)]  # y2
+            if matches.size == 0:
+                # No matches found: log and use empty placeholders
+                print(
+                    f"No matches for frames {i} and {i + 1} in {seq_dir.name}, writing placeholder"
+                )
+                coords = np.zeros((0, 4), dtype=int)
+                inliers = np.zeros(0, dtype=bool)
+                cv2_matches = []
+            else:
+                cv2_matches = [
+                    cv2.DMatch(int(m[0]), int(m[1]), float(m[2])) for m in matches
+                ]
+                inliers = np.ones(matches.shape[0], dtype=bool)
 
-            if seg0 is not None and seg1 is not None:
-                h, w = seg0.shape
-                coords[:, 0] = np.clip(coords[:, 0], 0, w - 1)
-                coords[:, 1] = np.clip(coords[:, 1], 0, h - 1)
-                coords[:, 2] = np.clip(coords[:, 2], 0, w - 1)
-                coords[:, 3] = np.clip(coords[:, 3], 0, h - 1)
-                # enforce static/flat-only matching (mirrors --stable-matching)
-                stable = np.isin(seg0[coords[:, 1], coords[:, 0]], [0, 1]) & \
-                         np.isin(seg1[coords[:, 3], coords[:, 2]], [0, 1])
-                coords = coords[stable]
-                inliers = inliers[stable]
-                cv2_matches = [m for m, keep in zip(cv2_matches, stable) if keep]
-                if coords.size == 0:
-                    continue
+                # Compute pixel coordinates of the matched keypoints.
+                coords = np.zeros((matches.shape[0], 4), dtype=int)
+                coords[:, 0] = pts0[0, matches[:, 0].astype(int)]  # x1
+                coords[:, 1] = pts0[1, matches[:, 0].astype(int)]  # y1
+                coords[:, 2] = pts1[0, matches[:, 1].astype(int)]  # x2
+                coords[:, 3] = pts1[1, matches[:, 1].astype(int)]  # y2
+
+                if seg0 is not None and seg1 is not None:
+                    h, w = seg0.shape
+                    coords[:, 0] = np.clip(coords[:, 0], 0, w - 1)
+                    coords[:, 1] = np.clip(coords[:, 1], 0, h - 1)
+                    coords[:, 2] = np.clip(coords[:, 2], 0, w - 1)
+                    coords[:, 3] = np.clip(coords[:, 3], 0, h - 1)
+                    # enforce static/flat-only matching (mirrors --stable-matching)
+                    stable = np.isin(seg0[coords[:, 1], coords[:, 0]], [0, 1]) & \
+                             np.isin(seg1[coords[:, 3], coords[:, 2]], [0, 1])
+                    coords = coords[stable]
+                    inliers = inliers[stable]
+                    cv2_matches = [m for m, keep in zip(cv2_matches, stable) if keep]
+                    if coords.size == 0:
+                        # All matches removed by segmentation filter
+                        print(
+                            f"All matches filtered for frames {i} and {i + 1} in {seq_dir.name}"
+                        )
+                        inliers = np.zeros(0, dtype=bool)
+                        cv2_matches = []
 
             # Convert normalized tensors back to uint8 images for visualization.
             img0_np = (img0.cpu().numpy().squeeze() * 255).astype(np.uint8)

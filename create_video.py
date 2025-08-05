@@ -1,6 +1,7 @@
 from pathlib import Path
 import cv2
 import argparse
+import numpy as np  # needed for placeholder frames
 
 
 def images_to_video(frame_dir: Path, output_path: Path, fps: int) -> None:
@@ -28,7 +29,9 @@ def images_to_video(frame_dir: Path, output_path: Path, fps: int) -> None:
     for img_path in images:
         frame = cv2.imread(str(img_path))
         if frame is None:
-            continue  # skip unreadable frames
+            # Insert a black frame to preserve timing when an image is missing
+            print(f"Warning: {img_path} unreadable, inserting blank frame")
+            frame = np.zeros((height, width, 3), dtype=np.uint8)
         writer.write(frame)
 
     writer.release()  # finalize the video file
