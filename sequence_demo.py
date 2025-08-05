@@ -146,30 +146,34 @@ def main():
                     cv2.DMatch(int(m[0]), int(m[1]), float(m[2])) for m in matches
                 ]
                 inliers = np.ones(matches.shape[0], dtype=bool)
-                coords = np.zeros((matches.shape[0], 4), dtype=int)
-                coords[:, 0] = pts0[0, matches[:, 0].astype(int)]  # x1
-                coords[:, 1] = pts0[1, matches[:, 0].astype(int)]  # y1
-                coords[:, 2] = pts1[0, matches[:, 1].astype(int)]  # x2
-                coords[:, 3] = pts1[1, matches[:, 1].astype(int)]  # y2
-
+                # pts0 and pts1 are in (row, col) order
+                rows0 = pts0[0, matches[:, 0].astype(int)].astype(int)
+                cols0 = pts0[1, matches[:, 0].astype(int)].astype(int)
+                rows1 = pts1[0, matches[:, 1].astype(int)].astype(int)
+                cols1 = pts1[1, matches[:, 1].astype(int)].astype(int)
                 if seg0 is not None and seg1 is not None:
-                    h, w = seg0.shape
                     # clip coordinates to image bounds before indexing
-                    coords[:, 0] = np.clip(coords[:, 0], 0, w - 1)
-                    coords[:, 1] = np.clip(coords[:, 1], 0, h - 1)
-                    coords[:, 2] = np.clip(coords[:, 2], 0, w - 1)
-                    coords[:, 3] = np.clip(coords[:, 3], 0, h - 1)
+                    rows0 = np.clip(rows0, 0, seg0.shape[0] - 1)
+                    cols0 = np.clip(cols0, 0, seg0.shape[1] - 1)
+                    rows1 = np.clip(rows1, 0, seg1.shape[0] - 1)
+                    cols1 = np.clip(cols1, 0, seg1.shape[1] - 1)
                     # filter matches to static/flat classes from both predictions
-                    stable = np.isin(seg0[coords[:, 1], coords[:, 0]], [0, 1]) & \
-                             np.isin(seg1[coords[:, 3], coords[:, 2]], [0, 1])
-                    coords = coords[stable]
+                    stable = np.isin(seg0[rows0, cols0], [0, 1]) & \
+                             np.isin(seg1[rows1, cols1], [0, 1])
+                    # coords = coords[stable]
+                    rows0, cols0, rows1, cols1 = (a[stable] for a in (rows0, cols0, rows1, cols1))
                     inliers = inliers[stable]
+                    debug_idx = np.random.choice(rows0.shape[0], size=min(20, rows0.shape[0]), replace=False)
+                    print("debugging_class", np.unique(seg0[rows0[debug_idx], cols0[debug_idx]]))
                     cv2_matches = [m for m, keep in zip(cv2_matches, stable) if keep]
-                    if coords.size == 0:
-                        print(f"All matches filtered for {img_path.stem} in {seq_dir.name}")
-                        inliers = np.zeros(0, dtype=bool)
-                        cv2_matches = []
-
+                    
+                    
+                # finally pack the surviving coordinates in (x, y) order for OpenCV
+                coords = np.column_stack([cols0, rows0, cols1, rows1]).astype(int)
+                if coords.size == 0:
+                    print(f"All matches filtered for {img_path.stem} in {seq_dir.name}")
+                    inliers = np.zeros(0, dtype=bool)
+                    cv2_matches = []
             # Overlay masks for visualization.
             img0_vis = overlay_mask(img0_raw, seg0) if seg0 is not None else img0_raw
             img1_vis = overlay_mask(img1_raw, seg1) if seg1 is not None else img1_raw

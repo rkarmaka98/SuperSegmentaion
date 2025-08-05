@@ -86,7 +86,7 @@ def draw_matches_cv(
         pt2_int = (int(round(pt2[0])) + w1, int(round(pt2[1])))
 
         # Draw a green line between corresponding points.
-        cv2.line(canvas, pt1_int, pt2_int, color=(0, 200, 0), thickness=1)
+        cv2.line(canvas, pt1_int, pt2_int, color=(0, 160, 0), thickness=1)
 
         if draw_keypoints:
             # Draw keypoints manually so we can control color/radius.
@@ -108,7 +108,7 @@ def draw_matches_cv(
     # Label the right panel containing segmentation and matching results.
     cv2.putText(
         canvas,
-        "Segmentation & Matching",
+        "Warped Image",
         (w1 + 10, 30),  # Offset by width of left image.
         font,
         1.0,
