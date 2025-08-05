@@ -23,25 +23,43 @@ from tqdm import tqdm
 from utils.draw import plot_imgs
 from utils.custom_logging import *
 
-def draw_matches_cv(data, matches, plot_points=True):
-    if plot_points:
-        keypoints1 = [cv2.KeyPoint(p[1], p[0], 0.1) for p in data['keypoints1']]
-        keypoints2 = [cv2.KeyPoint(p[1], p[0], 0.1) for p in data['keypoints2']]
-    else:
-        matches_pts = data['matches']
-        keypoints1 = [cv2.KeyPoint(p[0], p[1], 0.1) for p in matches_pts]
-        keypoints2 = [cv2.KeyPoint(p[2], p[3], 0.1) for p in matches_pts]
-        print(f"matches_pts: {matches_pts}")
-        # keypoints1, keypoints2 = [], []
 
-    inliers = data['inliers'].astype(bool)
-    # matches = np.array(data['matches'])[inliers].tolist()
-    # matches = matches[inliers].tolist()
+def draw_matches_cv(
+    data,
+    matches,
+    plot_points=True,
+    draw_keypoints=True,
+    point_color=(0, 0, 255),
+    point_radius=2,
+):
+    """Draw feature matches between two images using OpenCV.
+
+    The previous implementation relied on ``cv2.drawMatches`` with a single
+    color for all keypoints. This version allows optional rendering of the
+    keypoints using ``cv2.circle`` with customizable color and radius, and it
+    can omit keypoints entirely when ``draw_keypoints`` is ``False``.
+    """
+
+    if plot_points:
+        # Convert keypoints from (y, x) to (x, y) for OpenCV.
+        keypoints1 = np.array([[p[1], p[0]] for p in data['keypoints1']])
+        keypoints2 = np.array([[p[1], p[0]] for p in data['keypoints2']])
+    else:
+        # Use coordinates from ``data['matches']`` directly when keypoints are
+        # not separately provided. Indices become sequential by construction.
+        matches_pts = np.array(data['matches'])
+        keypoints1 = matches_pts[:, :2]
+        keypoints2 = matches_pts[:, 2:]
+        matches = [cv2.DMatch(i, i, 0) for i in range(len(matches_pts))]
+
+    inliers = data['inliers'].astype(bool)  # keep compatibility even if unused
+
     def ensure_color(img):
         if img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 1):
-            # Convert grayscale to BGR to avoid cv2.drawMatches errors
+            # Convert grayscale to BGR to avoid cv2 errors when concatenating
             return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         return img
+
     img1 = ensure_color(data['image1'])
     img2 = ensure_color(data['image2'])
 
@@ -51,8 +69,31 @@ def draw_matches_cv(data, matches, plot_points=True):
             return img32
         return cv2.convertScaleAbs(img32, alpha=255.0)
 
-    return cv2.drawMatches(to_uint8(img1), keypoints1, to_uint8(img2), keypoints2, matches,
-                           None, matchColor=(0,200,0), singlePointColor=(200, 200, 200))
+    img1 = to_uint8(img1)
+    img2 = to_uint8(img2)
+
+    # Create a blank canvas and place both images side by side.
+    h = max(img1.shape[0], img2.shape[0])
+    w1, w2 = img1.shape[1], img2.shape[1]
+    canvas = np.zeros((h, w1 + w2, 3), dtype=img1.dtype)
+    canvas[: img1.shape[0], :w1] = img1
+    canvas[: img2.shape[0], w1 : w1 + w2] = img2
+
+    for m in matches:
+        pt1 = keypoints1[m.queryIdx]
+        pt2 = keypoints2[m.trainIdx]
+        pt1_int = tuple(np.round(pt1).astype(int))
+        pt2_int = (int(round(pt2[0])) + w1, int(round(pt2[1])))
+
+        # Draw a green line between corresponding points.
+        cv2.line(canvas, pt1_int, pt2_int, color=(0, 200, 0), thickness=1)
+
+        if draw_keypoints:
+            # Draw keypoints manually so we can control color/radius.
+            cv2.circle(canvas, pt1_int, point_radius, point_color, -1)
+            cv2.circle(canvas, pt2_int, point_radius, point_color, -1)
+
+    return canvas
 
 def isfloat(value):
   try:

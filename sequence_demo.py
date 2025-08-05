@@ -29,6 +29,11 @@ def main():
 
     resize = config["data"]["preprocessing"]["resize"]  # model expects this size.
 
+    # Visualization controls for draw_matches_cv.
+    draw_keypoints = False  # draw only match lines if False
+    point_color = (0, 255, 0)  # BGR color for keypoints when drawn
+    point_radius = 3  # radius for keypoint circles
+
     def load_frame(p: Path):
         """Read and normalize a grayscale frame."""
         img = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
@@ -128,7 +133,14 @@ def main():
                 "matches": coords,
                 "inliers": inliers,
             }
-            match_img = draw_matches_cv(data, cv2_matches)
+            # Render matches with configurable keypoint display.
+            match_img = draw_matches_cv(
+                data,
+                cv2_matches,
+                draw_keypoints=draw_keypoints,
+                point_color=point_color,
+                point_radius=point_radius,
+            )
             cv2.imwrite(str(seq_out / f"matches_{i:05d}.png"), match_img)
 
 
