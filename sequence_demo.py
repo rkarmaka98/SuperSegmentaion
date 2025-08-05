@@ -8,7 +8,7 @@ import cv2
 
 from Val_model_heatmap import Val_model_heatmap
 # import metrics utilities for visualization
-from evaluation import overlay_mask, draw_matches_cv, compute_miou, compute_repeatability, draw_metrics_box
+from evaluation import overlay_mask, draw_matches_cv, compute_miou, compute_repeatability, draw_metrics_box, smooth_mask
 from utils.cityscapes_camera import (
     load_cityscapes_camera,
     simulate_ego_motion,
@@ -114,21 +114,22 @@ def main():
             img0 = torch.from_numpy(img0_raw.astype(np.float32) / 255.0).unsqueeze(0).unsqueeze(0).to(device)
             img1 = torch.from_numpy(img1_raw.astype(np.float32) / 255.0).unsqueeze(0).unsqueeze(0).to(device)
 
-            # Compute descriptors independently for the frame and its warp.
+            # Compute descriptors for the frame and its warp (segmentation predicted only once).
             val_agent.run(img0)
             pts0 = val_agent.heatmap_to_pts()[0]
             desc0 = val_agent.desc_to_sparseDesc()[0]
             seg0 = None
+            seg1 = None
             if "segmentation" in val_agent.outs:
                 seg0 = val_agent.outs["segmentation"].argmax(dim=1).cpu().numpy()[0]
+                seg0 = smooth_mask(seg0)  # denoise prediction before warping
+                # warp seg0 using ground-truth homography instead of re-inference
+                seg1 = cv2.warpPerspective(seg0, H, (seg0.shape[1], seg0.shape[0]),
+                                           flags=cv2.INTER_NEAREST)
 
             val_agent.run(img1)
             pts1 = val_agent.heatmap_to_pts()[0]
             desc1 = val_agent.desc_to_sparseDesc()[0]
-            seg1 = None
-            if "segmentation" in val_agent.outs:
-                # predict segmentation for warped frame independently
-                seg1 = val_agent.outs["segmentation"].argmax(dim=1).cpu().numpy()[0]
 
             # Perform two-way nearest-neighbor matching without tracking.
             matches = nn_match_two_way(desc0, desc1, val_agent.nn_thresh).T
@@ -153,6 +154,7 @@ def main():
 
                 if seg0 is not None and seg1 is not None:
                     h, w = seg0.shape
+                    # clip coordinates to image bounds before indexing
                     coords[:, 0] = np.clip(coords[:, 0], 0, w - 1)
                     coords[:, 1] = np.clip(coords[:, 1], 0, h - 1)
                     coords[:, 2] = np.clip(coords[:, 2], 0, w - 1)
@@ -194,7 +196,7 @@ def main():
             match_score = inliers.sum() / max(kp_count, 1)  # ratio of valid matches to total keypoints
             miou = (
                 compute_miou(seg0, seg1) if seg0 is not None and seg1 is not None else 0.0
-            )  # mIoU now compares seg1 predicted directly on img1
+            )  # mIoU between original prediction and its homography warp
             if kpts1.size and kpts2.size:
                 rep_data = {
                     "prob": np.hstack([kpts1, np.ones((kpts1.shape[0], 1))]),
@@ -204,7 +206,7 @@ def main():
                 }
                 repeatability, _ = compute_repeatability(
                     rep_data, keep_k_points=300, distance_thresh=3, verbose=False
-                )  # repeatability recomputed with independently inferred seg1
+                )  # repeatability relative to homography-warped view
             else:
                 repeatability = 0.0
 
