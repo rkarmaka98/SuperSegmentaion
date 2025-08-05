@@ -8,6 +8,11 @@ import cv2
 
 from Val_model_heatmap import Val_model_heatmap
 from evaluation import overlay_mask, draw_matches_cv
+from utils.cityscapes_camera import (
+    load_cityscapes_camera,
+    simulate_ego_motion,
+    compute_homography,
+)  # import helpers to compute homographies
 
 
 def nn_match_two_way(desc1: np.ndarray, desc2: np.ndarray, nn_thresh: float) -> np.ndarray:
@@ -83,9 +88,24 @@ def main():
             # Pair each frame with its homography-warped counterpart; no temporal loop.
             H_path = homography_root / seq_dir.name / f"{img_path.stem}.npy"
             if not H_path.exists():
-                print(f"Missing homography for {img_path}, skipping")
-                continue
-            H = np.load(str(H_path))
+                cam_json = Path("datasets/Cityscapes/camera/train") / seq_dir.name / f"{img_path.stem}_camera.json"
+                if not cam_json.exists():
+                    print(f"Missing homography and camera for {img_path}, skipping")
+                    continue
+                K, R_cam, t_cam = load_cityscapes_camera(cam_json)  # load parameters
+                original_width, original_height = 2048, 1024
+                scale_x = resize[1] / original_width
+                scale_y = resize[0] / original_height
+                K[0, :] *= scale_x  # scale intrinsics for resized images
+                K[1, :] *= scale_y
+                R_delta, t_delta = simulate_ego_motion()  # simulate motion
+                R_warped = R_delta @ R_cam
+                t_warped = t_cam + t_delta
+                H = compute_homography(K, R_cam, t_cam, R_warped, t_warped)  # compute homography
+                H_path.parent.mkdir(parents=True, exist_ok=True)
+                np.save(H_path, H)  # write homography for future runs
+            else:
+                H = np.load(str(H_path))
 
             img0_raw = load_frame(img_path)
             img1_raw = cv2.warpPerspective(img0_raw, H, (img0_raw.shape[1], img0_raw.shape[0]))
