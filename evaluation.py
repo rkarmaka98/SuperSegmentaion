@@ -52,7 +52,7 @@ def draw_matches_cv(data, matches, plot_points=True):
         return cv2.convertScaleAbs(img32, alpha=255.0)
 
     return cv2.drawMatches(to_uint8(img1), keypoints1, to_uint8(img2), keypoints2, matches,
-                           None, matchColor=(0,240,0), singlePointColor=(150, 150, 150))
+                           None, matchColor=(0,200,0), singlePointColor=(200, 200, 200))
 
 def isfloat(value):
   try:
