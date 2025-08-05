@@ -216,9 +216,9 @@ def main():
 
             metrics = {
                 "Keypoints": kp_count,
-                "Matching Score": f"{match_score:.2f}",
-                "mIoU": f"{miou:.3f}",
-                "Repeatability": f"{repeatability:.3f}",
+                "Matching Score": f"{match_score:.6f}",
+                "mIoU": f"{miou:.6f}",
+                "Repeatability": f"{repeatability:.6f}",
             }
             match_img = draw_metrics_box(match_img, metrics)
 
