@@ -30,9 +30,9 @@ def main():
     resize = config["data"]["preprocessing"]["resize"]  # model expects this size.
 
     # Visualization controls for draw_matches_cv.
-    draw_keypoints = False  # draw only match lines if False
+    draw_keypoints = True  # draw only match lines if False
     point_color = (0, 255, 0)  # BGR color for keypoints when drawn
-    point_radius = 3  # radius for keypoint circles
+    point_radius = 2  # radius for keypoint circles
 
     def load_frame(p: Path):
         """Read and normalize a grayscale frame."""
