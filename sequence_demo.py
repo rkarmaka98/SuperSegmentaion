@@ -86,6 +86,7 @@ def main():
             cv2_matches = [
                 cv2.DMatch(int(m[0]), int(m[1]), float(m[2])) for m in matches
             ]
+            inliers = np.ones(matches.shape[0], dtype=bool)
 
             # Compute pixel coordinates of the matched keypoints.
             coords = np.zeros((matches.shape[0], 4), dtype=int)
@@ -93,6 +94,21 @@ def main():
             coords[:, 1] = pts0[1, matches[:, 0].astype(int)]  # y1
             coords[:, 2] = pts1[0, matches[:, 1].astype(int)]  # x2
             coords[:, 3] = pts1[1, matches[:, 1].astype(int)]  # y2
+
+            if seg0 is not None and seg1 is not None:
+                h, w = seg0.shape
+                coords[:, 0] = np.clip(coords[:, 0], 0, w - 1)
+                coords[:, 1] = np.clip(coords[:, 1], 0, h - 1)
+                coords[:, 2] = np.clip(coords[:, 2], 0, w - 1)
+                coords[:, 3] = np.clip(coords[:, 3], 0, h - 1)
+                # enforce static/flat-only matching (mirrors --stable-matching)
+                stable = np.isin(seg0[coords[:, 1], coords[:, 0]], [0, 1]) & \
+                         np.isin(seg1[coords[:, 3], coords[:, 2]], [0, 1])
+                coords = coords[stable]
+                inliers = inliers[stable]
+                cv2_matches = [m for m, keep in zip(cv2_matches, stable) if keep]
+                if coords.size == 0:
+                    continue
 
             # Convert normalized tensors back to uint8 images for visualization.
             img0_np = (img0.cpu().numpy().squeeze() * 255).astype(np.uint8)
@@ -110,7 +126,7 @@ def main():
                 "keypoints1": kpts1,
                 "keypoints2": kpts2,
                 "matches": coords,
-                "inliers": np.ones(matches.shape[0], dtype=bool),
+                "inliers": inliers,
             }
             match_img = draw_matches_cv(data, cv2_matches)
             cv2.imwrite(str(seq_out / f"matches_{i:05d}.png"), match_img)
