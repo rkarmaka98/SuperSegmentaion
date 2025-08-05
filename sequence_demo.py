@@ -220,7 +220,8 @@ def main():
                 "mIoU": f"{miou:.3f}",
                 "Repeatability": f"{repeatability:.3f}",
             }
-            match_img = draw_metrics_box(match_img, metrics)
+            # place metrics box in the upper-right corner for visibility
+            match_img = draw_metrics_box(match_img, metrics, position="top-right")
 
             # Save visualization with metrics
             cv2.imwrite(str(seq_out / f"{img_path.stem}_matches.png"), match_img)
