@@ -164,6 +164,7 @@ def main():
                 "keypoints2": kpts2,
                 "matches": coords,
                 "inliers": inliers,
+                "homography": H,  # store ground-truth homography in output
             }
 
             match_img = draw_matches_cv(
