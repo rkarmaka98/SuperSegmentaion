@@ -2,7 +2,15 @@ import json
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-def load_cityscapes_camera(json_path):
+
+def load_cityscapes_camera(json_path, right_camera=False):
+    """Load Cityscapes camera parameters.
+
+    Args:
+        json_path (str): Path to the Cityscapes calibration JSON.
+        right_camera (bool): Whether to offset the translation to model the
+            right stereo camera. The baseline between cameras is 0.209313 m.
+    """
     with open(json_path, 'r') as f:
         data = json.load(f)
 
@@ -26,6 +34,10 @@ def load_cityscapes_camera(json_path):
     # Rotation matrix (yaw, pitch, roll order)
     R_cam = R.from_euler('yxz', [yaw, pitch, roll]).as_matrix()
     t = np.array([x, y, z])
+
+    if right_camera:
+        # Baseline from csCalibration.pdf: left-right offset of 0.209313 m
+        t = t + np.array([0.209313, 0.0, 0.0])  # shift along X-axis
 
     return K, R_cam, t
 
