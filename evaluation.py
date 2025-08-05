@@ -92,6 +92,30 @@ def draw_matches_cv(
             # Draw keypoints manually so we can control color/radius.
             cv2.circle(canvas, pt1_int, point_radius, point_color, -1)
             cv2.circle(canvas, pt2_int, point_radius, point_color, -1)
+    # Add descriptive text labels after composing the canvas.
+    font = cv2.FONT_HERSHEY_SIMPLEX  # Use a simple, readable font.
+    # Label the left panel showing the original video frame.
+    cv2.putText(
+        canvas,
+        "Original video",
+        (10, 30),  # Position near the top-left corner.
+        font,
+        1.0,
+        (255, 255, 255),
+        thickness=2,
+        lineType=cv2.LINE_AA,
+    )
+    # Label the right panel containing segmentation and matching results.
+    cv2.putText(
+        canvas,
+        "Segmentation & Matching",
+        (w1 + 10, 30),  # Offset by width of left image.
+        font,
+        1.0,
+        (255, 255, 255),
+        thickness=2,
+        lineType=cv2.LINE_AA,
+    )
 
     return canvas
 
@@ -326,6 +350,38 @@ def overlay_mask(image, mask, alpha=0.5, num_classes=None, class_names=None, cla
                 break
 
     return overlay
+
+
+def draw_metrics_box(image, metrics_dict):
+    """Overlay a semi-transparent metrics box on the image."""
+    lines = [f"{k}: {v}" for k, v in metrics_dict.items()]
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.5
+    thickness = 1
+    margin = 10
+
+    text_sizes = [cv2.getTextSize(t, font, font_scale, thickness)[0] for t in lines]
+    box_width = max(w for w, _ in text_sizes) + 2 * margin
+    line_height = max(h for _, h in text_sizes) + 5
+    box_height = line_height * len(lines) + margin
+
+    h, w = image.shape[:2]
+    x1 = w - box_width - margin
+    y1 = h - box_height - margin
+    x2 = w - margin
+    y2 = h - margin
+
+    overlay = image.copy()
+    cv2.rectangle(overlay, (x1, y1), (x2, y2), (0, 0, 0), -1)
+    cv2.addWeighted(overlay, 0.5, image, 0.5, 0, image)
+
+    for i, text in enumerate(lines):
+        y = y1 + margin + (i + 1) * line_height - 5
+        cv2.putText(image, text, (x1 + margin, y), font, font_scale,
+                    (255, 255, 255), thickness, cv2.LINE_AA)
+
+    return image
+
 
 def smooth_mask(mask, kernel_size=3):
     """Apply simple morphological post-processing to clean up a mask.
