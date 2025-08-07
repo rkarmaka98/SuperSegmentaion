@@ -640,9 +640,13 @@ def evaluate(args, **options):
             # Re-label matches within a small pixel error as inliers to cope with
             # the 1 px noise present in Cityscapes ground truth.
             if result['matches'].size > 0 and args.inlier_pixel_threshold >= 0:
-                # Warp keypoints using ground-truth homography to measure error
-                gt_warped = warp_keypoints(result['matches'][:, :2], real_H)
-                err = np.linalg.norm(gt_warped - result['matches'][:, 2:4], axis=1)
+                # result['matches'] stores coordinates in (row, col) order; swap to (x, y)
+                # before warping so the homography is applied on the correct axes.
+                gt_warped = warp_keypoints(result['matches'][:, [1, 0]], real_H)
+                # convert the target coordinates to (x, y) as well for distance computation
+                err = np.linalg.norm(
+                    gt_warped - result['matches'][:, 2:4][:, [1, 0]], axis=1
+                )
                 close = err <= args.inlier_pixel_threshold
                 if result['inliers'].size == err.size:
                     result['inliers'] = np.logical_or(result['inliers'].astype(bool), close)
@@ -871,14 +875,18 @@ def evaluate(args, **options):
                     mask2 = cv2.warpPerspective(mask1, real_H, (mask1.shape[1], mask1.shape[0]),
                                                 flags=cv2.INTER_NEAREST)
                     coords = result['matches'].astype(int)
-                    # clip coordinates to image bounds to avoid indexing errors
+                    # result['matches'] is (row0, col0, row1, col1);
+                    # clip rows by height and cols by width before indexing
                     h, w = mask1.shape
-                    coords[:, 0] = np.clip(coords[:, 0], 0, w - 1)
-                    coords[:, 1] = np.clip(coords[:, 1], 0, h - 1)
-                    coords[:, 2] = np.clip(coords[:, 2], 0, w - 1)
-                    coords[:, 3] = np.clip(coords[:, 3], 0, h - 1)
-                    stable = np.isin(mask1[coords[:, 1], coords[:, 0]], [0, 1]) & \
-                             np.isin(mask2[coords[:, 3], coords[:, 2]], [0, 1])
+                    coords[:, 0] = np.clip(coords[:, 0], 0, h - 1)  # rows of image1
+                    coords[:, 1] = np.clip(coords[:, 1], 0, w - 1)  # cols of image1
+                    coords[:, 2] = np.clip(coords[:, 2], 0, h - 1)  # rows of image2
+                    coords[:, 3] = np.clip(coords[:, 3], 0, w - 1)  # cols of image2
+                    # lookup segmentation labels at each endpoint using (row, col) order
+                    stable = (
+                        np.isin(mask1[coords[:, 0], coords[:, 1]], [0, 1])
+                        & np.isin(mask2[coords[:, 2], coords[:, 3]], [0, 1])
+                    )
                     if np.any(stable):
                         result_stable = dict(result)
                         # boolean mask `stable` corresponds to matches, not all keypoints;
