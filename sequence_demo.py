@@ -147,10 +147,11 @@ def main():
                 ]
                 inliers = np.ones(matches.shape[0], dtype=bool)
                 # pts0 and pts1 are in (row, col) order
-                rows0 = pts0[0, matches[:, 0].astype(int)].astype(int)
-                cols0 = pts0[1, matches[:, 0].astype(int)].astype(int)
-                rows1 = pts1[0, matches[:, 1].astype(int)].astype(int)
-                cols1 = pts1[1, matches[:, 1].astype(int)].astype(int)
+                # pts0/pts1 are returned in (x, y) order; split into columns/rows accordingly
+                cols0 = pts0[0, matches[:, 0].astype(int)].astype(int)  # x coordinates in image0
+                rows0 = pts0[1, matches[:, 0].astype(int)].astype(int)  # y coordinates in image0
+                cols1 = pts1[0, matches[:, 1].astype(int)].astype(int)  # x coordinates in image1
+                rows1 = pts1[1, matches[:, 1].astype(int)].astype(int)  # y coordinates in image1
                 if seg0 is not None and seg1 is not None:
                     # clip coordinates to image bounds before indexing
                     rows0 = np.clip(rows0, 0, seg0.shape[0] - 1)
@@ -160,8 +161,10 @@ def main():
                     # filter matches to static/flat classes from both predictions
                     stable = np.isin(seg0[rows0, cols0], [0, 1]) & \
                              np.isin(seg1[rows1, cols1], [0, 1])
-                    # coords = coords[stable]
-                    rows0, cols0, rows1, cols1 = (a[stable] for a in (rows0, cols0, rows1, cols1))
+                    # retain only matches on stable classes
+                    rows0, cols0, rows1, cols1 = (
+                        a[stable] for a in (rows0, cols0, rows1, cols1)
+                    )
                     inliers = inliers[stable]
                     debug_idx = np.random.choice(rows0.shape[0], size=min(20, rows0.shape[0]), replace=False)
                     print("debugging_class", np.unique(seg0[rows0[debug_idx], cols0[debug_idx]]))
