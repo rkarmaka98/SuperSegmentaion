@@ -1,344 +1,160 @@
-# pytorch-superpoint
+# PyTorch SuperPoint with Segmentation
 
-This is a PyTorch implementation of  "SuperPoint: Self-Supervised Interest Point Detection and Description." Daniel DeTone, Tomasz Malisiewicz, Andrew Rabinovich. [ArXiv 2018](https://arxiv.org/abs/1712.07629).
-This code is partially based on the tensorflow implementation
+This repository provides a PyTorch implementation of
+[SuperPoint: Self-Supervised Interest Point Detection and Description](https://arxiv.org/abs/1712.07629)
+along with utilities for semantic segmentation and the DeepFEPE project.
+The code builds upon the TensorFlow version from
 https://github.com/rpautrat/SuperPoint.
 
-Please be generous to star this repo if it helps your research.
-This repo is a bi-product of our paper [deepFEPE(IROS 2020)](https://github.com/eric-yyjau/pytorch-deepFEPE.git).
-
-## Differences between our implementation and original paper
-- *Descriptor loss*: We tested descriptor loss using different methods, including dense method (as paper but slightly different) and sparse method. We notice sparse loss can converge more efficiently with similar performance. The default setting here is sparse method.
-
-## Results on HPatches
-| Task                                      | Homography estimation |      |      | Detector metric |      | Descriptor metric |                |
-|-------------------------------------------|-----------------------|------|------|-----------------|------|-------------------|----------------|
-|                                           | Epsilon = 1           | 3    | 5    | Repeatability   | MLE  | NN mAP            | Matching Score |
-| Pretrained model                        | 0.44                  | 0.77 | 0.83 | 0.606           | 1.14 | 0.81              | 0.55           |
-| Sift (subpixel accuracy)                  | 0.63                  | 0.76 | 0.79 | 0.51            | 1.16 | 0.70               | 0.27            |
-| superpoint_coco_heat2_0_170k_hpatches_sub | 0.46                  | 0.75 | 0.81 | 0.63            | 1.07 | 0.78              | 0.42           |
-| superpoint_kitti_heat2_0_50k_hpatches_sub | 0.44                  | 0.71 | 0.77 | 0.56            | 0.95 | 0.78              | 0.41           |
-
-- Pretrained model is from [SuperPointPretrainedNetwork](https://github.com/MagicLeapResearch/SuperPointPretrainedNetwork).
-- The evaluation is done under our evaluation scripts.
-- COCO/ KITTI pretrained model is included in this repo.
-
-
 ## Installation
-### Requirements
-- python == 3.6
-- pytorch >= 1.1 (tested in 1.3.1)
-- torchvision >= 0.3.0 (tested in 0.4.2)
-- cuda (tested in cuda10)
 
-```
-conda create --name py36-sp python=3.6
-conda activate py36-sp
+- Python ≥ 3.10
+- Install dependencies:
+
+```bash
 pip install -r requirements.txt
-pip install -r requirements_torch.txt # install pytorch
+pip install -r requirements_torch.txt  # PyTorch and related packages
 ```
 
-### Path setting
-- paths for datasets ($DATA_DIR), logs are set in `setting.py`
+Dataset and log paths are configured in `settings.py`.
 
-### Dataset
-Datasets should be downloaded into $DATA_DIR. The Synthetic Shapes dataset will also be generated there. The folder structure should look like:
+## Project structure
 
 ```
-datasets/ ($DATA_DIR)
-|-- COCO
-|   |-- train2017
-|   |   |-- file1.jpg
-|   |   `-- ...
-|   `-- val2017
-|       |-- file1.jpg
-|       `-- ...
-|   |-- panoptic_train2017
-|   |-- panoptic_val2017
-|   |-- panoptic_val2017.json
-|   |-- panoptic_train2017.json
-`-- HPatches
-|   |-- i_ajuntament
-|   `-- ...
-`-- synthetic_shapes  # will be automatically created
-```
-- MS-COCO 2017
-    - [MS-COCO 2017 link](http://cocodataset.org/#download)
-    - For panoptic training download the panoptic annotations and place the corresponding folders `panoptic_train2017/` and `panoptic_val2017/` with their JSON files under `COCO/annotations`.
-    - Use `utils/coco_panoptic_to_cs34.py` to convert panoptic PNGs to Cityscapes-34 labels when training semantic segmentation with 34 classes. The script writes grayscale masks which can be placed under `panoptic_cs34_train2017/` and `panoptic_cs34_val2017/`.
-      Example:
-
-      ```bash
-      python utils/coco_panoptic_to_cs34.py \
-          --src panoptic_val2017 \
-          --ann annotations/panoptic_val2017.json \
-          --categories annotations/panoptic_coco_categories.json \
-          --dst panoptic_cs34_val2017
-      ```
-    - Set `load_panoptic: true` and `use_cs34_masks: true` in your configuration to train with these grayscale masks instead of the standard panoptic labels. When both options are enabled, the JSON annotations are not required.
-    - Run `utils/remove_unpaired_coco_images.py` to delete images in `train2017/` that do not have a corresponding CS‑34 mask if you want to keep the dataset consistent.
-    - For evaluation, generate a category file matching the Cityscapes‑34 IDs:
-
-      ```bash
-      python utils/create_cs34_categories_json.py \
-          --dst annotations/panoptic_cs34_categories.json
-      ```
-
-      Pass `--category-file annotations/panoptic_cs34_categories.json` to
-      `evaluation.py` so class names and colors are correct when visualizing
-      predictions.
-- HPatches
-    - [HPatches link](http://icvl.ee.ic.ac.uk/vbalnt/hpatches/hpatches-sequences-release.tar.gz)
-
-### Cityscapes
-- [Cityscapes link](https://www.cityscapes-dataset.com/downloads/)
-- After extracting, place the dataset under `$DATA_DIR/Cityscapes` so that the
-  directory structure is:
-
-```
-datasets/ ($DATA_DIR)
-`-- Cityscapes
-    |-- leftImg8bit
-    |   |-- train
-    |   |-- val
-    |   `-- test
-    |-- gtFine            # original labels
-    `-- gtFine_1024       # 512x1024 masks from resize_cityscapes_masks.py
-        |-- train
-        |-- val
-        `-- test
-```
-- If the dataset is stored elsewhere, update `DATA_PATH` in `settings.py`.
-
-Run `datasets/resize_cityscapes_masks.py` once to create the `gtFine_1024`
-folder and ensure the masks match the 512×1024 training resolution:
-
-```bash
-python datasets/resize_cityscapes_masks.py datasets/Cityscapes
+SuperSegmentaion/
+├── configs/      # training and export configuration files
+├── datasets/     # dataset loaders and tools
+├── docs/         # in-depth documentation
+├── models/       # network definitions
+├── utils/        # helper scripts
+└── ...
 ```
 
-Example commands using the Cityscapes configs:
+## Dataset preparation
 
-Mixed precision can be enabled by setting `amp: true` in the YAML file. This
-activates PyTorch's autocast and `GradScaler` during training.
+Datasets should reside under the directory specified by `DATA_PATH` in
+`settings.py`. A typical layout is:
 
-```bash
-# training
-python train4.py train_joint configs/superpoint_cityscapes_finetune.yaml superpoint_cityscapes --eval
-
-# export predictions (including segmentation masks)
-python export.py export_descriptor configs/superpoint_cityscapes_export.yaml cityscapes_export --export-segmentation
-
-# evaluate exported segmentation
-python evaluation.py logs/cityscapes_export/predictions --evaluate-segmentation
+```
+datasets/ ($DATA_PATH)
+├── COCO
+│   ├── train2017/
+│   ├── val2017/
+│   ├── panoptic_train2017/
+│   └── panoptic_val2017/
+├── HPatches/
+├── Cityscapes
+│   ├── leftImg8bit/{train,val,test}/
+│   ├── gtFine/
+│   └── gtFine_1024/{train,val,test}/
+└── synthetic_shapes/  # generated automatically
 ```
 
-For presentations you can upsample prediction masks back to the original
-Cityscapes resolution using nearest-neighbor interpolation before overlaying
-them on the images.
+- **COCO 2017** – Download the images and panoptic annotations. Use
+  `utils/coco_panoptic_to_cs34.py` to generate Cityscapes-34 labels when
+  training segmentation.
+- **HPatches** – Download the sequence dataset from the
+  [official site](http://icvl.ee.ic.ac.uk/vbalnt/hpatches/hpatches-sequences-release.tar.gz).
+- **Cityscapes** – Extract the dataset under `$DATA_PATH/Cityscapes` and run
+  `datasets/resize_cityscapes_masks.py` to create 512×1024 masks.
 
-To visualize the 4-category mapping, pass `--category-file utils/cs4_categories.json`
-to `evaluation.py`.
+Utility scripts in `utils/` provide additional conversions and dataset clean-up.
 
-Both configs load a checkpoint via their `pretrained` option. Update this path
-to point at the model you wish to fine-tune or evaluate.
+## Pipeline
 
-When `warped_pair.enable` is set to true in `superpoint_cityscapes_export.yaml`,
-the Cityscapes loader also returns `warped_image` and its corresponding
-`homography` so descriptor metrics can be exported like on COCO or HPatches.
-When `homography_adaptation.enable` is used with
-`magicpoint_cityscape_export.yaml`, the loader outputs a batch of warped images
-along with `valid_mask`, `homographies` and `inv_homographies` for GPU-based
-homography adaptation export.
-Each sample now also contains a `scene_name` entry (the city identifier) so that
-the export script can organise predictions in subfolders like it does for KITTI.
+1. **Train MagicPoint on Synthetic Shapes**
 
-Exporting MagicPoint on Cityscapes now also writes TensorBoard summaries.
-Open TensorBoard in `runs/export_detector_homoAdapt/` to browse keypoint
-overlays, segmentation masks and the mIoU for each image.
+   ```bash
+   python train4.py train_base configs/magicpoint_shapes_pair.yaml magicpoint_synth --eval
+   ```
 
-Predicted segmentation masks can also be exported by adding
-`--export-segmentation` to other export commands and evaluated using
-`evaluation.py --evaluate-segmentation`.
+2. **Export homography-adapted detections on COCO or KITTI**
 
-The segmentation head uses a lightweight ASPP decoder which provides
-better context while keeping the model small enough for mid-range GPUs.
+   ```bash
+   python export.py export_detector_homoAdapt configs/magicpoint_coco_export.yaml \
+       magicpoint_synth_homoAdapt_coco
+   ```
 
-**Note**: Training with `batch_size=1` previously failed because the
-`BatchNorm2d` layers inside the ASPP module receive a 1x1 tensor after
-global pooling. Statistics become invalid and the network outputs NaNs.
-These layers now use `GroupNorm`, which works reliably even when the
-batch size is one.
+3. **Train SuperPoint on COCO or KITTI**
 
+   ```bash
+   python train4.py train_joint configs/superpoint_coco_train_heatmap.yaml superpoint_coco --eval --debug
+   python train4.py train_joint configs/superpoint_kitti_train_heatmap.yaml superpoint_kitti --eval --debug
+   ```
 
-## run the code
-- Notes:
-    - Start from any steps (1-4) by downloading some intermediate results
-    - Training usually takes 8-10 hours on one 'NVIDIA 2080Ti'.
-    - Currently Support training on 'COCO' dataset (original paper), 'KITTI' dataset.
-- Tensorboard:
-    - log files is saved under 'runs/<\export_task>/...'
-    - `seg_overlay` shows predicted segmentation masks blended with the input image
-    
-`tensorboard --logdir=./runs/ [--host | static_ip_address] [--port | 6008]`
+4. **Export and evaluate on HPatches**
 
-### 1) Training MagicPoint on Synthetic Shapes
-```
-python train4.py train_base configs/magicpoint_shapes_pair.yaml magicpoint_synth --eval
-```
-you don't need to download synthetic data. You will generate it when first running it.
-Synthetic data is exported in `./datasets`. You can change the setting in `settings.py`.
+   ```bash
+   python export.py export_descriptor configs/magicpoint_repeatability_heatmap.yaml superpoint_hpatches_test
+   python evaluation.py logs/superpoint_hpatches_test/predictions --repeatibility --outputImg --homography --plotMatching
+   ```
 
-### 2) Exporting detections on MS-COCO / kitti
-This is the step of homography adaptation(HA) to export pseudo ground truth for joint training.
-- make sure the pretrained model in config file is correct
-- make sure COCO dataset is in '$DATA_DIR' (defined in setting.py)
-<!-- - you can export hpatches or coco dataset by editing the 'task' in config file -->
-- config file:
-```
-export_folder: <'train' | 'val'>  # set export for training or validation
-```
-#### General command:
-```
-python export.py <export task>  <config file>  <export folder> [--outputImg | output images for visualization (space inefficient)]
-```
-#### export coco - do on training set 
-```
-python export.py export_detector_homoAdapt configs/magicpoint_coco_export.yaml magicpoint_synth_homoAdapt_coco
-```
-#### export coco - do on validation set 
-- Edit 'export_folder' to 'val' in 'magicpoint_coco_export.yaml'
-```
-python export.py export_detector_homoAdapt configs/magicpoint_coco_export.yaml magicpoint_synth_homoAdapt_coco
-```
+   Segmentation metrics can be produced with:
 
+   ```bash
+   python evaluation.py <output_path> --evaluate-segmentation
+   ```
 
-### 3) Training Superpoint on MS-COCO/ KITTI
-You need pseudo ground truth labels to traing detectors. Labels can be exported from step 2) or downloaded from [link](https://drive.google.com/drive/folders/1nnn0UbNMFF45nov90PJNnubDyinm2f26?usp=sharing). Then, as usual, you need to set config file before training.
-- config file
-  - root: specify your labels root
-  - root_split_txt: where you put the train.txt/ val.txt split files (no need for COCO, needed for KITTI)
-  - labels: the exported labels from homography adaptation
-  - pretrained: specify the pretrained model (you can train from scratch)
-- 'eval': turn on the evaluation during training 
+5. **(Optional) Benchmark classical descriptors such as SIFT**
 
-#### General command
-```
-python train4.py <train task> <config file> <export folder> --eval
-```
-
-#### COCO
-```
-python train4.py train_joint configs/superpoint_coco_train_heatmap.yaml superpoint_coco --eval --debug
-```
-To train using COCO panoptic labels, set `dataset: 'coco_panoptic'` and `load_panoptic: true` in the configuration. The COCO folder must contain `panoptic_train2017/`, `panoptic_val2017/` and their corresponding JSON files under `annotations/`.
-#### kitti
-```
-python train4.py train_joint configs/superpoint_kitti_train_heatmap.yaml superpoint_kitti --eval --debug
-```
-
-- set your batch size (originally 1)
-- refer to: 'train_tutorial.md'
-
-### 4) Export/ Evaluate the metrics on HPatches
-- Use pretrained model or specify your model in config file
-- ```./run_export.sh``` will run export then evaluation.
-
-#### Export
-- download HPatches dataset (link above). Put in the $DATA_DIR.
-```python export.py <export task> <config file> <export folder>```
-- Export keypoints, descriptors, matching
-```
-python export.py export_descriptor  configs/magicpoint_repeatability_heatmap.yaml superpoint_hpatches_test
-```
-To also export predicted segmentation masks, append `--export-segmentation`:
-```
-python export.py export_descriptor <config> <folder> --export-segmentation
-```
-#### evaluate
-```python evaluation.py <path to npz files> [-r, --repeatibility | -o, --outputImg | -homo, --homography ]```
-- Evaluate homography estimation/ repeatability/ matching scores ...
-```
-python evaluation.py logs/superpoint_hpatches_test/predictions --repeatibility --outputImg --homography --plotMatching
-```
-Segmentation quality can be evaluated with:
-```
-python evaluation.py <output_path> --evaluate-segmentation
-```
-Passing `--outputImg` saves colored predictions and ground truth masks under
-`<output_path>/segmentation`.
-
-### 5) Export/ Evaluate repeatability on SIFT
-- Refer to another project: [Feature-preserving image denoising with multiresolution filters](https://github.com/eric-yyjau/image_denoising_matching)
-```shell
-# export detection, description, matching
-python export_classical.py export_descriptor configs/classical_descriptors.yaml sift_test --correspondence
-
-# evaluate (use 'sift' flag)
-python evaluation.py logs/sift_test/predictions --sift --repeatibility --homography 
-```
-
-
-- specify the pretrained model
+   ```bash
+   python export_classical.py export_descriptor configs/classical_descriptors.yaml sift_test --correspondence
+   python evaluation.py logs/sift_test/predictions --sift --repeatibility --homography
+   ```
 
 ## Pretrained models
-### Current best model
-- *COCO dataset*
-```logs/superpoint_coco_heat2_0/checkpoints/superPointNet_170000_checkpoint.pth.tar```
-- *KITTI dataset*
-```logs/superpoint_kitti_heat2_0/checkpoints/superPointNet_50000_checkpoint.pth.tar```
-### model from magicleap
-```pretrained/superpoint_v1.pth```
 
-## Jupyter notebook 
-```shell
-# show images saved in the folders
-jupyter notebook
-notebooks/visualize_hpatches.ipynb 
-```
+- COCO: `logs/superpoint_coco_heat2_0/checkpoints/superPointNet_170000_checkpoint.pth.tar`
+- KITTI: `logs/superpoint_kitti_heat2_0/checkpoints/superPointNet_50000_checkpoint.pth.tar`
+- MagicLeap: `pretrained/superpoint_v1.pth`
 
-## Updates (year.month.day)
-- 2020.08.05: 
-  - Update pytorch nms from (https://github.com/eric-yyjau/pytorch-superpoint/pull/19)
-  - Update and test KITTI dataloader and labels on google drive (should be able to fit the KITTI raw format)
-  - Update and test SIFT evaluate at step 5.
+## Documentation
 
-## Known problems
-- ~~test step 5: evaluate on SIFT~~
-- Export COCO dataset in low resolution (240x320) instead of high resolution (480x640).
-- Due to step 1 was done long time ago. We are still testing it again along with step 2-4. Please refer to our pretrained model or exported labels. Or let us know how the whole pipeline works.
-- Warnings from tensorboard.
+In-depth guides on the model architecture, configuration options, and
+evaluation pipeline are available in the [docs](docs/) directory and the
+project overview [docs.md](docs.md).
+Key references include `architecture.md`, `configuration.md`, `pipeline.md`,
+and `benchmarks.md`.
 
-## Work in progress
-- Release notebooks with unit testing.
-- Dataset: ApolloScape/ TUM.
+## Results and benchmarks
 
-## Citations
-Please cite the original paper.
+Evaluation metrics are collated in `summary.csv`. An example Cityscapes export
+reports the following scores:
+
+| Task              | Homography@3 | Homography@5 | Repeatability | MLE  | NN mAP | Matching Score | Segmentation IOU |
+|-------------------|--------------|--------------|---------------|------|--------|----------------|------------------|
+| cityscapes_export | 0.9997       | 1.0          | 0.8334        | 1.75 | 0.9988 | 0.99998        | 0.8427           |
+
+See [docs/benchmarks.md](docs/benchmarks.md) for detailed benchmarking
+workflows and sample result tables.
+
+## Citation
+
+Please cite the original SuperPoint paper and our DeepFEPE paper:
+
 ```
 @inproceedings{detone2018superpoint,
-  title={Superpoint: Self-supervised interest point detection and description},
-  author={DeTone, Daniel and Malisiewicz, Tomasz and Rabinovich, Andrew},
-  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition Workshops},
-  pages={224--236},
-  year={2018}
+  title     = {SuperPoint: Self-supervised interest point detection and description},
+  author    = {DeTone, Daniel and Malisiewicz, Tomasz and Rabinovich, Andrew},
+  booktitle = {CVPR Workshops},
+  pages     = {224--236},
+  year      = {2018}
 }
-```
 
-Please also cite our DeepFEPE paper.
-```
 @misc{2020_jau_zhu_deepFEPE,
-Author = {You-Yi Jau and Rui Zhu and Hao Su and Manmohan Chandraker},
-Title = {Deep Keypoint-Based Camera Pose Estimation with Geometric Constraints},
-Year = {2020},
-Eprint = {arXiv:2007.15122},
+  Author = {You-Yi Jau and Rui Zhu and Hao Su and Manmohan Chandraker},
+  Title  = {Deep Keypoint-Based Camera Pose Estimation with Geometric Constraints},
+  Year   = {2020},
+  Eprint = {arXiv:2007.15122},
 }
 ```
 
-# Credits
-This implementation is developed by [You-Yi Jau](https://github.com/eric-yyjau) and [Rui Zhu](https://github.com/Jerrypiglet). Please contact You-Yi for any problems. 
-Again the work is based on Tensorflow implementation by [Rémi Pautrat](https://github.com/rpautrat) and [Paul-Edouard Sarlin](https://github.com/Skydes) and official [SuperPointPretrainedNetwork](https://github.com/MagicLeapResearch/SuperPointPretrainedNetwork).
-Thanks to Daniel DeTone for help during the implementation.
+## Credits
 
-## Posts
-[What have I learned from the implementation of deep learning paper?](https://medium.com/@eric.yyjau/what-have-i-learned-from-the-implementation-of-deep-learning-paper-365ee3253a89)
+This implementation was developed by
+[You-Yi Jau](https://github.com/eric-yyjau) and
+[Rui Zhu](https://github.com/Jerrypiglet) and is based on work by
+[Rémi Pautrat](https://github.com/rpautrat),
+[Paul-Edouard Sarlin](https://github.com/Skydes) and
+[MagicLeap Research](https://github.com/MagicLeapResearch/SuperPointPretrainedNetwork).
+
