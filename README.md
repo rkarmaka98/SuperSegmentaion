@@ -6,6 +6,8 @@ along with utilities for semantic segmentation and the DeepFEPE project.
 The code builds upon the TensorFlow version from
 https://github.com/rpautrat/SuperPoint.
 
+https://github.com/user-attachments/assets/d1b99108-9b3b-4d37-a1d5-35b6da3a99b2
+
 ## Installation
 
 - Python ≥ 3.10
@@ -59,6 +61,7 @@ datasets/ ($DATA_PATH)
   `datasets/resize_cityscapes_masks.py` to create 512×1024 masks.
 
 Utility scripts in `utils/` provide additional conversions and dataset clean-up.
+<img width="1179" height="367" alt="19cv" src="https://github.com/user-attachments/assets/4b40cc40-8623-4a6e-9920-b8118a149ef3" />
 
 ## Pipeline
 
