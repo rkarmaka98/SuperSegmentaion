@@ -154,12 +154,9 @@ Please cite the original SuperPoint paper and our DeepFEPE paper:
 
 ## Credits
 
-This implementation was developed by
-[You-Yi Jau](https://github.com/eric-yyjau) and
-[Rui Zhu](https://github.com/Jerrypiglet) and is based on work by
+This implementation was developed by [Rajarshi Karmakar](https://github.com/rkarmaka98) is based on work by
 [Rémi Pautrat](https://github.com/rpautrat),
-[Paul-Edouard Sarlin](https://github.com/Skydes) and
-[MagicLeap Research](https://github.com/MagicLeapResearch/SuperPointPretrainedNetwork).
+[Paul-Edouard Sarlin](https://github.com/Skydes)
 
 ## LICENCE
 This software is free for personal and educational use. Commercial use of this software, in whole or in part, is strictly prohibited without prior written permission from the author.
