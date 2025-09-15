@@ -161,3 +161,6 @@ This implementation was developed by
 [Paul-Edouard Sarlin](https://github.com/Skydes) and
 [MagicLeap Research](https://github.com/MagicLeapResearch/SuperPointPretrainedNetwork).
 
+## LICENCE
+This software is free for personal and educational use. Commercial use of this software, in whole or in part, is strictly prohibited without prior written permission from the author.
+
