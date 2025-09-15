@@ -61,7 +61,7 @@ datasets/ ($DATA_PATH)
   `datasets/resize_cityscapes_masks.py` to create 512×1024 masks.
 
 Utility scripts in `utils/` provide additional conversions and dataset clean-up.
-<img width="1179" height="367" alt="19cv" src="https://github.com/user-attachments/assets/4b40cc40-8623-4a6e-9920-b8118a149ef3" />
+<img width="673" height="337" alt="image" src="https://github.com/user-attachments/assets/18cb244e-2b0d-4146-b156-0396b25e6ef7" />
 
 ## Pipeline
 
